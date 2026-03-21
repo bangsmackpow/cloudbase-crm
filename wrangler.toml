@@ -5,7 +5,8 @@ compatibility_date = "2024-03-21"
 [[d1_databases]]
 binding = "DB"
 database_name = "cloudbase-db"
-database_id = "REPLACE_WITH_YOUR_D1_ID"
+database_id = "e3f00142-276f-46a9-bf9f-ee3b94827cb9"
+
 
 [[r2_buckets]]
 binding = "BUCKET"
