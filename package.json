@@ -1,0 +1,18 @@
+{
+  "name": "cloudbase-crm",
+  "version": "1.0.0",
+  "description": "Edge-native AI CRM for Built Networks",
+  "main": "src/index.ts",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "db:migrate": "wrangler d1 migrations apply cloudbase-db --local"
+  },
+  "dependencies": {
+    "hono": "^4.0.0"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.0.0",
+    "wrangler": "^4.76.0"
+  }
+}

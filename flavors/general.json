@@ -1,0 +1,12 @@
+{
+  "id": "general",
+  "name": "Small Business Starter",
+  "custom_fields": [
+    {"name": "niche", "type": "text", "label": "Business Niche"}
+  ],
+  "ai_hunter_focus": [
+    "Standard SEO meta-tag audit",
+    "Broken link detection",
+    "Basic mobile responsiveness check"
+  ]
+}

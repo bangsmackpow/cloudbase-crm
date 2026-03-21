@@ -1,0 +1,15 @@
+{
+  "id": "msp",
+  "name": "Managed Services & IT",
+  "custom_fields": [
+    {"name": "endpoint_count", "type": "number", "label": "Estimated Endpoints"},
+    {"name": "has_compliance_need", "type": "boolean", "label": "HIPAA/PCI Required"},
+    {"name": "cloud_provider", "type": "text", "label": "Current Cloud (M365/Google)"}
+  ],
+  "ai_hunter_focus": [
+    "Identify expired SSL certificates",
+    "Detect open RDP ports or exposed login portals",
+    "Check for O365/M365 MX records to pitch migration services",
+    "Assess 'Security Headers' grade (A-F)"
+  ]
+}
