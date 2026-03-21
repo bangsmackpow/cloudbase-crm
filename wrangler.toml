@@ -17,3 +17,7 @@ binding = "AI"
 
 [vars]
 JWT_SECRET = "dev-secret-123"
+
+# Add this at the bottom
+[triggers]
+crons = ["0 13 * * *"] # Runs at 13:00 UTC (8:00 AM Creston time)
