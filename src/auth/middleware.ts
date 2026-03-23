@@ -3,6 +3,14 @@ import { createMiddleware } from 'hono/factory';
 
 export const authMiddleware = (secret: string) => 
   createMiddleware(async (c, next) => {
+    // 0. Skip OPTIONS for CORS Preflight
+    if (c.req.method === 'OPTIONS') return await next();
+
+    if (!secret) {
+        console.error('[AUTH] JWT_SECRET is missing from Environment Bindings.');
+        return c.json({ error: 'Internal Error', message: 'Auth Engine Misconfigured' }, 500);
+    }
+
     // 1. Get token from Header (Bearer) or Query Param (SSE/Media)
     let token = '';
     const authHeader = c.req.header('Authorization');
@@ -20,7 +28,7 @@ export const authMiddleware = (secret: string) =>
 
     try {
         // 2. Verify JWT manually (Avoids immutable header issues in Workers)
-        const payload = await verify(token, secret);
+        const payload = await verify(token, secret, 'HS256');
         
         if (!payload || !payload.tenant_id) {
             return c.json({ error: 'Forbidden', message: 'Invalid token context' }, 403);
