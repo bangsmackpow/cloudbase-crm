@@ -11,6 +11,7 @@ import scheduledHandler from './workers/hunter';
 import storage from './api/storage/handler';
 import schema from './api/schema/admin';
 import search from './api/ai/search';
+import crm from './api/crm/operations';
 import { processNicheDiscovery } from './api/hunter/hunter_engine';
 
 const app = new Hono<{ Bindings: any }>();
@@ -59,6 +60,8 @@ app.get('/api/test/hunt', async (c) => {
 
 // 4. Protected CRM Sub-App
 const api = new Hono<{ Bindings: any }>();
+
+// JWT Guard - Extracts tenant_id and role
 api.use('/*', (c, next) => authMiddleware(c.env.JWT_SECRET)(c, next));
 
 // Mounted Protected Routes
@@ -70,6 +73,7 @@ api.route('/realtime', sse); // PocketBase parity
 api.route('/storage', storage); // PB/SB parity
 api.route('/schema', schema); // PB parity
 api.route('/ai/search', search); // Supabase parity
+api.route('/crm', crm); // Salesforce/SugarCRM parity
 
 api.get('/leads', async (c) => {
   const user = c.get('jwtPayload');
