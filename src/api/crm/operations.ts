@@ -1,5 +1,6 @@
 import { Hono } from 'hono';
 
+// CRM Core Operations v4.1 (Force-Corrected)
 const crm = new Hono<{ Bindings: any }>();
 
 // --- REVENUE STATS (Phase 5: Financial Layer) ---
