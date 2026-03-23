@@ -1,6 +1,9 @@
 import { Hono } from 'hono';
 
-const schema = new Hono<{ Bindings: any }>();
+const schema = new Hono<{ 
+  Bindings: any,
+  Variables: { jwtPayload: any }
+}>();
 
 // GET /api/schema/collections
 schema.get('/collections', async (c) => {

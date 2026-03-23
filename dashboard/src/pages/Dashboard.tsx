@@ -41,6 +41,7 @@ export default function Dashboard() {
   const [workflows, setWorkflows] = useState<any[]>([]);
   const [billingInfo, setBillingInfo] = useState({ plan: 'Enterprise Matrix', cycle: 'Annual', nextBill: '2026-04-12', amount: '$2,400.00' });
   const [auditLogs, setAuditLogs] = useState<any[]>([]);
+  const [globalContacts, setGlobalContacts] = useState<any[]>([]);
   
   const navigate = useNavigate();
   const logoutRef = useRef(false);
@@ -91,9 +92,9 @@ export default function Dashboard() {
         fetch(`${API_BASE}/crm/stats`, { headers }),
         fetch(`${API_BASE}/crm/notifications`, { headers })
       ]);
-      
+
       if (leadRes.status === 401) { logout(); return; }
-      
+
       if (leadRes.ok) setLeads(await leadRes.json());
       if (taskRes.ok) setTasks(await taskRes.json());
       if (statsRes.ok) setCrmStats(await statsRes.json());
@@ -121,6 +122,10 @@ export default function Dashboard() {
           const res = await fetch(`${API_BASE}/crm/workflows`, { headers });
           if (res.ok) setWorkflows(await res.json());
       }
+      if (tab === 'contacts') {
+          const res = await fetch(`${API_BASE}/crm/contacts`, { headers });
+          if (res.ok) setGlobalContacts(await res.json());
+      }
       if (tab === 'audit') {
           const res = await fetch(`${API_BASE}/crm/admin/audit`, { headers });
           if (res.ok) setAuditLogs(await res.json());
@@ -141,7 +146,7 @@ export default function Dashboard() {
   }, [fetchData]);
 
   useEffect(() => {
-      if (['schema', 'storage', 'users', 'automation', 'audit'].includes(activeTab)) fetchBaaSData(activeTab);
+      if (['schema', 'storage', 'users', 'automation', 'audit', 'contacts'].includes(activeTab)) fetchBaaSData(activeTab);
   }, [activeTab, fetchBaaSData]);
 
   const updateLeadStatus = async (leadId: string, status: string) => {
@@ -159,7 +164,7 @@ export default function Dashboard() {
       const token = localStorage.getItem('cb_token');
       const url = targetStaff ? `${API_BASE}/auth/users/${targetStaff.id}` : `${API_BASE}/auth/users`;
       const method = targetStaff ? 'PATCH' : 'POST';
-      
+
       const res = await fetch(url, {
           method,
           headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
@@ -190,7 +195,7 @@ export default function Dashboard() {
       const token = localStorage.getItem('cb_token');
       const url = type === 'email' ? `${API_BASE}/auth/me/email` : `${API_BASE}/auth/me/password`;
       const body = type === 'email' ? { newEmail: settingsData.newEmail } : { oldPassword: settingsData.oldPassword, newPassword: settingsData.newPassword };
-      
+
       const res = await fetch(url, {
           method: 'PATCH',
           headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
@@ -215,7 +220,7 @@ export default function Dashboard() {
             body: JSON.stringify(huntParams)
         });
         const d = await res.json();
-        if (res.ok) { setHuntResult(d); fetchData(); } 
+        if (res.ok && d.data) { setHuntResult(d.data); fetchData(); }
     } catch (err) {}
     finally { setIsHunting(false); }
   };
@@ -228,7 +233,7 @@ export default function Dashboard() {
 
   const bulkUpdateStatus = async (status: string) => {
     const token = localStorage.getItem('cb_token');
-    await Promise.all(selectedLeads.map(id => 
+    await Promise.all(selectedLeads.map(id =>
         fetch(`${API_BASE}/crm/leads/${id}`, {
             method: 'PATCH',
             headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
@@ -242,7 +247,7 @@ export default function Dashboard() {
   const bulkDeleteLeads = async () => {
     if (!confirm(`Are you sure you want to expunge ${selectedLeads.length} prospects?`)) return;
     const token = localStorage.getItem('cb_token');
-    await Promise.all(selectedLeads.map(id => 
+    await Promise.all(selectedLeads.map(id =>
         fetch(`${API_BASE}/crm/leads/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } })
     ));
     setSelectedLeads([]);
@@ -253,7 +258,7 @@ export default function Dashboard() {
 
   return (
     <div className={`min-h-screen bg-background flex font-sans selection:bg-primary/30 overflow-hidden text-foreground ${theme}`}>
-      
+
       {/* Sidebar */}
       <aside className="w-56 bg-slate-100 dark:bg-slate-950 border-r border-slate-200 dark:border-white/5 flex flex-col p-4 z-[60] transition-all">
          <div className="flex items-center gap-2 mb-8 pl-1">
@@ -272,7 +277,7 @@ export default function Dashboard() {
              <SideNavItem icon={<Users size={14}/>} label="Contacts" active={activeTab === 'contacts'} onClick={() => setActiveTab('contacts')} />
              <SideNavItem icon={<Zap size={14}/>} label="Discovery" active={activeTab === 'hunter'} onClick={() => setActiveTab('hunter')} />
              <SideNavItem icon={<PieChart size={14}/>} label="Reports" active={activeTab === 'reports'} onClick={() => setActiveTab('reports')} />
-             
+
              {isAdmin && (
                 <>
                    <div className="mt-6 mb-1 text-[7px] text-slate-400 dark:text-slate-700 font-bold uppercase tracking-[0.3em] italic pl-3">Systems</div>
@@ -334,7 +339,7 @@ export default function Dashboard() {
         </nav>
 
         <main className="p-8 space-y-8 max-w-6xl mx-auto w-full pb-32">
-          
+
           {activeTab === 'crm' && (
              <div className="space-y-8">
                 <header className="flex justify-between items-end">
@@ -361,7 +366,7 @@ export default function Dashboard() {
                         </div>
                     </div>
                 )}
-                
+
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
                     <KanbanCol title="New Leads" leads={leads.filter(l => l.status === 'New' && l.company_name.toLowerCase().includes(searchTerm.toLowerCase()))} status="New" onDrop={updateLeadStatus} selectedLeads={selectedLeads} onSelect={(id: string) => setSelectedLeads(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id])} />
                     <KanbanCol title="In Progress" leads={leads.filter(l => l.status === 'Contacted' && l.company_name.toLowerCase().includes(searchTerm.toLowerCase()))} status="Contacted" onDrop={updateLeadStatus} selectedLeads={selectedLeads} onSelect={(id: string) => setSelectedLeads(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id])} />
@@ -374,8 +379,8 @@ export default function Dashboard() {
           {activeTab === 'tasks' && (
               <div className="space-y-8 animate-in fade-in duration-300">
                   <header>
-                      <h2 className="text-3xl font-black italic tracking-tighter uppercase leading-none">Queue <span className="text-orange-500">Management</span></h2>
-                      <p className="text-slate-500 text-[10px] font-bold italic opacity-60 uppercase mt-1">Upcoming tasks across all active leads.</p>
+                      <h2 className="text-3xl font-black italic tracking-tighter uppercase leading-none">Process <span className="text-primary">Queue</span></h2>
+                      <p className="text-slate-500 text-[10px] font-bold italic opacity-60 uppercase mt-1">Upcoming actions across all active prospects.</p>
                   </header>
                   <div className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-white/5 rounded-3xl overflow-hidden shadow-xl">
                       <table className="w-full text-left">
@@ -394,7 +399,7 @@ export default function Dashboard() {
                                           <div className="text-[11px] font-black italic uppercase text-foreground">{t.title}</div>
                                       </td>
                                       <td className="px-6 py-4">
-                                          <Link to={`/lead/${t.lead_id}`} className="text-[10px] font-bold text-orange-500 hover:underline uppercase italic">{t.company_name}</Link>
+                                          <Link to={`/lead/${t.lead_id}`} className="text-[11px] font-black italic text-primary hover:underline uppercase tracking-tight">{t.company_name}</Link>
                                       </td>
                                       <td className="px-6 py-4 text-[10px] font-black italic text-slate-500 uppercase">{new Date(t.due_at).toLocaleDateString()}</td>
                                       <td className="px-6 py-4">
@@ -412,12 +417,70 @@ export default function Dashboard() {
               <div className="space-y-8 animate-in fade-in duration-300">
                   <header>
                       <h2 className="text-3xl font-black italic tracking-tighter uppercase leading-none">Contact <span className="text-primary">Directory</span></h2>
-                      <p className="text-slate-500 text-[10px] font-bold italic opacity-60 uppercase mt-1">Personnel details across all identified companies.</p>
+                      <p className="text-slate-500 text-[10px] font-bold italic opacity-60 uppercase mt-1">Full personnel oversight across the grid.</p>
                   </header>
-                  <div className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-white/5 rounded-3xl p-12 text-center shadow-xl">
-                      <Users size={48} className="mx-auto text-slate-200 dark:text-slate-800 mb-4" />
-                      <h3 className="text-xl font-black italic uppercase tracking-tighter">Global Contacts List</h3>
-                      <p className="text-[10px] text-slate-500 font-bold uppercase italic mt-2">Aggregate view coming soon. Please view contacts via individual leads.</p>
+                  <div className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-white/5 rounded-3xl overflow-hidden shadow-xl">
+                      <table className="w-full text-left">
+                          <thead className="bg-slate-50 dark:bg-slate-900/50 border-b border-white/5">
+                              <tr>
+                                  <th className="px-6 py-4 text-[10px] font-black uppercase italic text-slate-500 tracking-widest">Name</th>
+                                  <th className="px-6 py-4 text-[10px] font-black uppercase italic text-slate-500 tracking-widest">Role</th>
+                                  <th className="px-6 py-4 text-[10px] font-black uppercase italic text-slate-500 tracking-widest">Company</th>
+                                  <th className="px-6 py-4 text-[10px] font-black uppercase italic text-slate-500 tracking-widest">Email</th>
+                              </tr>
+                          </thead>
+                          <tbody>
+                              {globalContacts.map(c => (
+                                  <tr key={c.id} className="border-b border-white/5 hover:bg-slate-50 dark:hover:bg-slate-900/30 transition-all">
+                                      <td className="px-6 py-4">
+                                          <div className="text-[11px] font-black italic uppercase text-foreground">{c.first_name} {c.last_name}</div>
+                                      </td>
+                                      <td className="px-6 py-4 text-[10px] font-black italic text-slate-500 uppercase">{c.role || c.title}</td>
+                                      <td className="px-6 py-4">
+                                          <Link to={`/lead/${c.lead_id}`} className="text-[11px] font-black italic uppercase text-primary hover:underline">{c.company_name}</Link>
+                                      </td>
+                                      <td className="px-6 py-4 text-[11px] font-black italic text-slate-500 uppercase">{c.email}</td>
+                                  </tr>
+                              ))}
+                              {globalContacts.length === 0 && <tr><td colSpan={4} className="text-center py-12 text-slate-500 italic opacity-50 uppercase font-black text-[10px]">No personnel records found in database.</td></tr>}
+                          </tbody>
+                      </table>
+                  </div>
+              </div>
+          )}
+
+          {activeTab === 'storage' && isAdmin && (
+              <div className="space-y-8 animate-in fade-in duration-300">
+                  <header>
+                      <h2 className="text-3xl font-black italic tracking-tighter uppercase leading-none">Vault <span className="text-primary">Explorer</span></h2>
+                      <p className="text-slate-500 text-[10px] font-bold italic opacity-60 uppercase mt-1">Cataloged digitized assets and audit materials.</p>
+                  </header>
+                  <div className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-white/5 rounded-3xl overflow-hidden shadow-xl">
+                      <table className="w-full text-left">
+                          <thead className="bg-slate-50 dark:bg-slate-900/50 border-b border-white/5">
+                              <tr>
+                                  <th className="px-6 py-4 text-[10px] font-black uppercase italic text-slate-500 tracking-widest">Object Key</th>
+                                  <th className="px-6 py-4 text-[10px] font-black uppercase italic text-slate-500 tracking-widest">Size</th>
+                                  <th className="px-6 py-4 text-[10px] font-black uppercase italic text-slate-500 tracking-widest">Last Modified</th>
+                                  <th className="px-6 py-4"></th>
+                              </tr>
+                          </thead>
+                          <tbody>
+                              {objects.map(obj => (
+                                  <tr key={obj.key} className="border-b border-white/5 hover:bg-slate-50 dark:hover:bg-slate-900/30 transition-all">
+                                      <td className="px-6 py-4">
+                                          <div className="text-[11px] font-black italic uppercase text-foreground truncate max-w-[300px]">{obj.key.split('/').pop()}</div>
+                                      </td>
+                                      <td className="px-6 py-4 text-[10px] font-black italic text-slate-400 uppercase">{(obj.size / 1024).toFixed(1)} KB</td>
+                                      <td className="px-6 py-4 text-[10px] font-black italic text-slate-500 uppercase">{new Date(obj.uploaded).toLocaleString()}</td>
+                                      <td className="px-6 py-4 text-right">
+                                          <a href={`https://cloudbase-crm.curtislamasters.workers.dev/api/storage/view/${obj.key}`} target="_blank" rel="noreferrer" className="text-primary hover:text-primary/80"><ExternalLink size={14}/></a>
+                                      </td>
+                                  </tr>
+                              ))}
+                              {objects.length === 0 && <tr><td colSpan={4} className="text-center py-12 text-slate-500 italic opacity-50 uppercase font-black text-[10px]">Vault is currently empty.</td></tr>}
+                          </tbody>
+                      </table>
                   </div>
               </div>
           )}
@@ -544,7 +607,7 @@ export default function Dashboard() {
                                       <td className="px-6 py-4">
                                           <div className="text-[11px] font-black italic uppercase text-primary">{log.company_name || 'System Level'}</div>
                                       </td>
-                                      <td className="px-6 py-4 text-[10px] font-black italic text-slate-500 uppercase">{log.created_by?.split('@')[0]}</td>
+                                      <td className="px-6 py-4 text-[10px] font-black italic text-slate-500 uppercase">{log.created_by ? log.created_by.split('@')[0] : 'AUTO'}</td>
                                       <td className="px-6 py-4 text-[10px] font-black italic text-slate-500 uppercase">{new Date(log.created_at).toLocaleString()}</td>
                                   </tr>
                               ))}
@@ -738,7 +801,7 @@ export default function Dashboard() {
 
 function SideNavItem({ icon, label, active, onClick }: any) {
     return (
-        <div 
+        <div
             onClick={onClick}
             className={`flex items-center gap-3 px-4 py-2.5 rounded-lg cursor-pointer transition-all duration-200 group ${active ? 'bg-primary text-primary-foreground shadow-lg shadow-primary/20' : 'text-slate-500 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-900/40 hover:text-primary'}`}
         >
@@ -750,8 +813,8 @@ function SideNavItem({ icon, label, active, onClick }: any) {
 
 function ThemeBtn({ active, onClick, icon, label }: any) {
     return (
-        <button 
-            onClick={onClick} 
+        <button
+            onClick={onClick}
             title={label}
             className={`flex-1 p-1.5 rounded-md flex items-center justify-center transition-all ${active ? 'bg-primary text-primary-foreground shadow-sm shadow-primary/20 border border-primary/20' : 'text-slate-400 hover:bg-slate-500/10'}`}
         >
@@ -776,43 +839,65 @@ function ReportCard({ title, val, trend, icon }: any) {
 }function KanbanCol({ title, leads, status, onDrop, selectedLeads, onSelect }: any) {
     const handleDragOver = (e: any) => e.preventDefault();
     const handleDrop = (e: any) => {
-        const id = e.dataTransfer.getData('leadId');
-        onDrop(id, status);
+        const leadId = e.dataTransfer.getData('leadId');
+        onDrop(leadId, status);
     };
 
     return (
-        <div 
-            onDragOver={handleDragOver} 
+        <div
+            onDragOver={handleDragOver}
             onDrop={handleDrop}
-            className="bg-slate-100/30 dark:bg-slate-950/20 border border-white/5 rounded-2xl p-4 min-h-[400px] flex flex-col space-y-3"
+            className="flex flex-col h-[700px] bg-slate-50/50 dark:bg-slate-900/20 rounded-[40px] border border-slate-200 dark:border-white/5 p-6 animate-in slide-in-from-bottom-4 duration-500"
         >
-            <div className="flex justify-between items-center mb-4 pl-1">
-                <h4 className="text-[9px] font-black uppercase italic tracking-widest text-slate-500">{title}</h4>
+            <div className="flex justify-between items-center mb-6 px-2">
+                <h3 className="text-[12px] font-black italic uppercase tracking-widest text-slate-500">{title}</h3>
                 <div className="text-[8px] font-black opacity-30 italic">{leads.length} Prospects</div>
             </div>
-            <div className="space-y-3 flex-1">
+            <div className="space-y-3 flex-1 overflow-y-auto pr-2 custom-scrollbar">
                 {leads.map((l: any) => (
-                    <div 
-                        key={l.id} 
-                        draggable 
+                    <div
+                        key={l.id}
+                        draggable
                         onDragStart={(e) => e.dataTransfer.setData('leadId', l.id)}
-                        className={`bg-white dark:bg-slate-950 border p-4 rounded-xl shadow-md cursor-grab active:cursor-grabbing transition-all group ${selectedLeads.includes(l.id) ? 'border-primary ring-1 ring-primary/20' : 'border-slate-200 dark:border-white/10 hover:border-primary/30'}`}
+                        className={`bg-white dark:bg-slate-950 border p-4 rounded-2xl shadow-md cursor-grab active:cursor-grabbing transition-all group ${selectedLeads.includes(l.id) ? 'border-primary ring-1 ring-primary/20' : 'border-slate-200 dark:border-white/10 hover:border-primary/30'}`}
                     >
-                        <div className="flex justify-between items-center mb-1">
-                            <div className="flex items-center gap-2">
-                                <input type="checkbox" checked={selectedLeads.includes(l.id)} onChange={() => onSelect(l.id)} className="w-3 h-3 rounded border-white/10 bg-slate-100 dark:bg-slate-900 accent-primary cursor-pointer" />
-                                <span className={`text-[8px] font-black uppercase px-2 py-0.5 rounded ${l.ai_score > 80 ? 'bg-red-500/10 text-red-500 font-bold' : 'bg-primary/10 text-primary font-bold'}`}>{l.ai_score} RISK</span>
-                            </div>
-                            <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-all">
-                                <Link to={`/lead/${l.id}`} className="text-slate-400 hover:text-primary"><ChevronRight size={14}/></Link>
-                            </div>
+                        <div className="flex justify-between items-start mb-1 overflow-hidden">
+                            <h4 className="text-[11px] font-black italic uppercase leading-none tracking-tighter truncate text-slate-700 dark:text-slate-100">{l.company_name}</h4>
+                            <input
+                                type="checkbox"
+                                checked={selectedLeads.includes(l.id)}
+                                onChange={() => onSelect(l.id)}
+                                className="w-3 h-3 rounded bg-slate-200 dark:bg-slate-800 border-none accent-primary cursor-pointer"
+                                onClick={e => e.stopPropagation()}
+                            />
                         </div>
-                        <h5 className="text-[11px] font-black italic uppercase tracking-tight truncate">{l.company_name}</h5>
+
+                        <div className="flex items-center gap-2 mb-3">
+                             <span className="text-[7px] font-black uppercase tracking-widest text-primary/80">{l.status}</span>
+                             {l.contact_count === 0 && (
+                                <span className="text-[6px] font-black uppercase bg-red-500/5 text-red-500/80 px-1 py-0.5 rounded border border-red-500/10 italic animate-pulse">Missing Personnel</span>
+                             )}
+                        </div>
+
+                        <div className="flex justify-between items-center mt-2 pt-2 border-t border-slate-100 dark:border-white/5">
+                            <div className="flex items-center gap-1.5 text-[8px] font-black uppercase italic">
+                                <span className={`px-1.5 py-0.5 rounded ${l.ai_score > 80 ? 'bg-red-500/10 text-red-500' : 'bg-primary/10 text-primary'}`}>{l.ai_score} Risk</span>
+                                {l.website_url && (
+                                    <a href={l.website_url} target="_blank" rel="noreferrer" className="text-slate-400 hover:text-primary transition-colors">
+                                        <Globe size={10}/>
+                                    </a>
+                                )}
+                            </div>
+                            <Link
+                                to={`/lead/${l.id}`}
+                                className="p-1.5 bg-slate-50 dark:bg-slate-900 rounded-lg text-slate-400 hover:text-primary transition-all group-hover:translate-x-1"
+                            >
+                                <ChevronRight size={14}/>
+                            </Link>
+                        </div>
                     </div>
                 ))}
             </div>
         </div>
     );
-}
-
 }

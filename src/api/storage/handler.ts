@@ -1,6 +1,9 @@
 import { Hono } from 'hono';
 
-const storage = new Hono<{ Bindings: any }>();
+const storage = new Hono<{ 
+  Bindings: any,
+  Variables: { jwtPayload: any }
+}>();
 
 // POST /api/storage/upload (PocketBase Parity)
 storage.post('/upload', async (c) => {
@@ -51,6 +54,12 @@ storage.get('/view/:key', async (c) => {
   headers.set('etag', object.httpEtag);
 
   return new Response(object.body, { headers });
+});
+
+storage.get('/list', async (c) => {
+    const user = c.get('jwtPayload');
+    const { objects } = await c.env.BUCKET.list({ prefix: `tenants/${user.tenant_id}/` });
+    return c.json(objects);
 });
 
 export default storage;

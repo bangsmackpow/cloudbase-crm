@@ -88,14 +88,6 @@ api.route('/schema', schema); // PB parity
 api.route('/ai/search', search); // Supabase parity
 api.route('/crm', crm); // Salesforce/SugarCRM parity
 
-api.get('/leads', async (c) => {
-  const user = c.get('jwtPayload');
-  const { results } = await c.env.DB.prepare(
-    "SELECT * FROM leads WHERE tenant_id = ? ORDER BY created_at DESC"
-  ).bind(user.tenant_id).all();
-  return c.json(results);
-});
-
 // Mount the Protected API to /api
 app.route('/api', api);
 

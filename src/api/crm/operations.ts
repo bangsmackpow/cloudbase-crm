@@ -2,11 +2,27 @@ import { Hono } from 'hono';
 import { rescanSingleLead } from '../hunter/hunter_engine';
 import { triggerWorkflow } from './workflows';
 
-// CRM Core Operations v4.2 (Fixed Context Typing)
+// --- CRM Core Operations v4.5 (Consolidated Discovery) ---
 const crm = new Hono<{ 
   Bindings: any, 
   Variables: { jwtPayload: any } 
 }>();
+
+crm.get('/leads', async (c) => {
+  const user = c.get('jwtPayload');
+  const { results } = await c.env.DB.prepare(
+    "SELECT l.*, (SELECT COUNT(*) FROM contacts WHERE lead_id = l.id) as contact_count FROM leads l WHERE l.tenant_id = ? ORDER BY l.created_at DESC"
+  ).bind(user.tenant_id).all();
+  return c.json(results);
+});
+
+crm.get('/contacts', async (c) => {
+    const user = c.get('jwtPayload');
+    const { results } = await c.env.DB.prepare(
+        "SELECT c.*, l.company_name FROM contacts c JOIN leads l ON c.lead_id = l.id WHERE c.tenant_id = ? ORDER BY c.first_name ASC"
+    ).bind(user.tenant_id).all();
+    return c.json(results);
+});
 
 // --- REVENUE STATS (Phase 5: Financial Layer) ---
 crm.get('/stats', async (c) => {
