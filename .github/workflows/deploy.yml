@@ -12,8 +12,28 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Install Dependencies
+      - name: Install Root Dependencies
         run: npm install
+
+      - name: Run Snyk (Worker)
+        uses: snyk/actions/node@master
+        continue-on-error: true
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+
+      - name: Build Dashboard
+        run: |
+          cd dashboard
+          npm install
+          npm run build
+          
+      - name: Run Snyk (Dashboard)
+        uses: snyk/actions/node@master
+        continue-on-error: true
+        with:
+          args: --file=dashboard/package.json
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
 
       - name: Apply Migrations (Production)
         run: npx wrangler d1 migrations apply cloudbase-db --remote
@@ -26,3 +46,9 @@ jobs:
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+
+      - name: Deploy Dashboard (Cloudflare Pages)
+        run: npx wrangler pages deploy dashboard/dist --project-name cloudbase-admin
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}

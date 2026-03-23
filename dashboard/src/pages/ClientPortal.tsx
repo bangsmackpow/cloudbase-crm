@@ -121,7 +121,7 @@ export default function ClientPortal() {
           </section>
 
           <footer className="pt-24 text-center border-t border-slate-200 dark:border-white/5 opacity-50 space-y-4">
-              <p className="text-[9px] font-black uppercase tracking-[0.3em] italic text-slate-500">Autonomous Infrastructure Analysis Provided By Built Networks</p>
+              <p className="text-[9px] font-black uppercase tracking-[0.3em] italic text-slate-500">Autonomous Infrastructure Analysis Provided By CloudBase CRM</p>
               <div className="flex justify-center gap-8">
                   <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
               </div>

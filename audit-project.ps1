@@ -28,11 +28,13 @@ foreach ($file in $requiredFiles) {
         $size = (Get-Item $file).Length
         if ($size -gt 0) {
             Write-Host "  [OK] Found: $file ($size bytes)" -ForegroundColor Green
-        } else {
+        }
+        else {
             Write-Host "  [!] Empty: $file (Needs Content)" -ForegroundColor Yellow
             $missingCount++
         }
-    } else {
+    }
+    else {
         Write-Host "  [X] MISSING: $file" -ForegroundColor Red
         $missingCount++
     }
@@ -41,6 +43,7 @@ foreach ($file in $requiredFiles) {
 Write-Host "`n--- Audit Summary ---" -ForegroundColor Cyan
 if ($missingCount -eq 0) {
     Write-Host "✅ All core files present. You are ready to push to GitHub!" -ForegroundColor Green
-} else {
+}
+else {
     Write-Host "❌ $missingCount items need attention before your first commit." -ForegroundColor Red
 }

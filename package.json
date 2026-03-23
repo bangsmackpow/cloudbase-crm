@@ -1,7 +1,7 @@
 {
   "name": "cloudbase-crm",
   "version": "1.0.0",
-  "description": "Edge-native AI CRM for Built Networks",
+  "description": "Edge-native AI CRM for CloudBase",
   "main": "src/index.ts",
   "scripts": {
     "dev": "wrangler dev",

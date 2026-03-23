@@ -27,7 +27,7 @@ export const triggerWorkflow = async (db: any, tenantId: string, triggerType: st
                 ).bind(
                     crypto.randomUUID(), 
                     tenantId, 
-                    notifyPayload.recipient || 'admin@builtnetworks.com', // fallback to tenant admin
+                    notifyPayload.recipient || 'admin@cloudbase-crm.com', // fallback to tenant admin
                     'SYSTEM',
                     'WORKFLOW',
                     notifyPayload.message || `Workflow '${workflow.name}' triggered.`,

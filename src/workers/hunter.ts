@@ -5,7 +5,7 @@ export default {
     // 1. Discovery Pulse (Lead Generation)
     const niche = "Dentists";
     const location = "Creston, IA";
-    const tenantId = "built-networks-001"; 
+    const tenantId = "cloudbase-001"; 
 
     console.log(`[SCHEDULED] Launching Lead Hunter...`);
     const result = await processNicheDiscovery(niche, location, env, tenantId);

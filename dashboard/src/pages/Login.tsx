@@ -26,7 +26,7 @@ export default function Login() {
     <div className="min-h-screen flex items-center justify-center bg-[#020617] p-6">
       <div className="w-full max-w-md glass-card p-10">
         <div className="text-center mb-10">
-          <div className="h-12 w-12 bg-orange-600 rounded-xl flex items-center justify-center font-bold mx-auto mb-4 text-xl">B</div>
+          <div className="h-12 w-12 bg-orange-600 rounded-xl flex items-center justify-center font-bold mx-auto mb-4 text-xl text-white">C</div>
           <h1 className="text-2xl font-black text-white">CloudBase Command</h1>
           <p className="text-slate-500 text-sm mt-2">Enter your credentials to access the edge.</p>
         </div>
