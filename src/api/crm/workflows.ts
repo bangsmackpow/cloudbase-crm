@@ -20,7 +20,21 @@ export const triggerWorkflow = async (db: any, tenantId: string, triggerType: st
                 break;
                 
             case 'SEND_NOTIFICATION':
-                // Simple mock: log to activities as 'Automation Notification'
+                const notifyPayload = JSON.parse(workflow.action_payload || '{}');
+                // 1. Create a true notification for the user to see in their bell icon
+                await db.prepare(
+                    "INSERT INTO notifications (id, tenant_id, user_id, sender_id, type, message, link) VALUES (?, ?, ?, ?, ?, ?, ?)"
+                ).bind(
+                    crypto.randomUUID(), 
+                    tenantId, 
+                    notifyPayload.recipient || 'admin@builtnetworks.com', // fallback to tenant admin
+                    'SYSTEM',
+                    'WORKFLOW',
+                    notifyPayload.message || `Workflow '${workflow.name}' triggered.`,
+                    `/lead/${leadId}`
+                ).run();
+
+                // 2. Also log to activities for timeline
                 await db.prepare(
                     "INSERT INTO activities (id, lead_id, tenant_id, type, content) VALUES (?, ?, ?, ?, ?)"
                 ).bind(crypto.randomUUID(), leadId, tenantId, 'Automation', `Workflow '${workflow.name}' triggered: Notification Sent.`).run();

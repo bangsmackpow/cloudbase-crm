@@ -298,4 +298,46 @@ crm.patch('/notifications/read/:id', async (c) => {
     return c.json({ success: true });
 });
 
+crm.get('/workflows', async (c) => {
+    const user = c.get('jwtPayload');
+    const { results } = await c.env.DB.prepare(
+        "SELECT * FROM workflows WHERE tenant_id = ? ORDER BY created_at DESC"
+    ).bind(user.tenant_id).all();
+    return c.json(results);
+});
+
+crm.post('/workflows', async (c) => {
+    const user = c.get('jwtPayload');
+    const { name, trigger_type, trigger_value, action_type, action_payload } = await c.req.json();
+    const id = crypto.randomUUID();
+
+    await c.env.DB.prepare(
+        "INSERT INTO workflows (id, tenant_id, name, trigger_type, trigger_value, action_type, action_payload) VALUES (?, ?, ?, ?, ?, ?, ?)"
+    ).bind(id, user.tenant_id, name, trigger_type, trigger_value, action_type, action_payload).run();
+
+    return c.json({ success: true, id });
+});
+
+crm.delete('/workflows/:id', async (c) => {
+    const id = c.req.param('id');
+    const user = c.get('jwtPayload');
+    await c.env.DB.prepare("DELETE FROM workflows WHERE id = ? AND tenant_id = ?").bind(id, user.tenant_id).run();
+    return c.json({ success: true });
+});
+
+crm.get('/admin/audit', async (c) => {
+    const user = c.get('jwtPayload');
+    if (user.role?.toLowerCase() !== 'admin') return c.json({ error: "Forbidden" }, 403);
+    
+    const { results } = await c.env.DB.prepare(`
+        SELECT a.*, l.company_name 
+        FROM audit_history a 
+        LEFT JOIN leads l ON a.lead_id = l.id 
+        WHERE a.tenant_id = ? 
+        ORDER BY a.created_at DESC LIMIT 50
+    `).bind(user.tenant_id).all();
+    
+    return c.json(results);
+});
+
 export default crm;

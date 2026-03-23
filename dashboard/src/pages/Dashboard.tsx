@@ -30,12 +30,17 @@ export default function Dashboard() {
   const [huntParams, setHuntParams] = useState({ niche: 'Law Firms', location: 'Creston, IA' });
   const [theme, setTheme] = useState(localStorage.getItem('theme') || 'dark');
   const [viewMode, setViewMode] = useState('list'); 
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedLeads, setSelectedLeads] = useState<string[]>([]);
   
   const [collections, setCollections] = useState<any[]>([]);
   const [objects, setObjects] = useState<any[]>([]);
   const [dashboardUsers, setDashboardUsers] = useState<any[]>([]);
   const [notifications, setNotifications] = useState<any[]>([]);
   const [showNotifications, setShowNotifications] = useState(false);
+  const [workflows, setWorkflows] = useState<any[]>([]);
+  const [billingInfo, setBillingInfo] = useState({ plan: 'Enterprise Matrix', cycle: 'Annual', nextBill: '2026-04-12', amount: '$2,400.00' });
+  const [auditLogs, setAuditLogs] = useState<any[]>([]);
   
   const navigate = useNavigate();
   const logoutRef = useRef(false);
@@ -112,6 +117,14 @@ export default function Dashboard() {
           const res = await fetch(`${API_BASE}/auth/users`, { headers });
           if (res.ok) setDashboardUsers(await res.json());
       }
+      if (tab === 'automation') {
+          const res = await fetch(`${API_BASE}/crm/workflows`, { headers });
+          if (res.ok) setWorkflows(await res.json());
+      }
+      if (tab === 'audit') {
+          const res = await fetch(`${API_BASE}/crm/admin/audit`, { headers });
+          if (res.ok) setAuditLogs(await res.json());
+      }
     } catch (err) { console.error(err); }
   }, []);
 
@@ -128,7 +141,7 @@ export default function Dashboard() {
   }, [fetchData]);
 
   useEffect(() => {
-      if (['schema', 'storage', 'users'].includes(activeTab)) fetchBaaSData(activeTab);
+      if (['schema', 'storage', 'users', 'automation', 'audit'].includes(activeTab)) fetchBaaSData(activeTab);
   }, [activeTab, fetchBaaSData]);
 
   const updateLeadStatus = async (leadId: string, status: string) => {
@@ -207,6 +220,35 @@ export default function Dashboard() {
     finally { setIsHunting(false); }
   };
 
+  const deleteWorkflow = async (id: string) => {
+    const token = localStorage.getItem('cb_token');
+    await fetch(`${API_BASE}/crm/workflows/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } });
+    fetchBaaSData('automation');
+  };
+
+  const bulkUpdateStatus = async (status: string) => {
+    const token = localStorage.getItem('cb_token');
+    await Promise.all(selectedLeads.map(id => 
+        fetch(`${API_BASE}/crm/leads/${id}`, {
+            method: 'PATCH',
+            headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ status })
+        })
+    ));
+    setSelectedLeads([]);
+    fetchData();
+  };
+
+  const bulkDeleteLeads = async () => {
+    if (!confirm(`Are you sure you want to expunge ${selectedLeads.length} prospects?`)) return;
+    const token = localStorage.getItem('cb_token');
+    await Promise.all(selectedLeads.map(id => 
+        fetch(`${API_BASE}/crm/leads/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } })
+    ));
+    setSelectedLeads([]);
+    fetchData();
+  };
+
   const isAdmin = user?.role?.toLowerCase() === 'admin';
 
   return (
@@ -234,9 +276,11 @@ export default function Dashboard() {
              {isAdmin && (
                 <>
                    <div className="mt-6 mb-1 text-[7px] text-slate-400 dark:text-slate-700 font-bold uppercase tracking-[0.3em] italic pl-3">Systems</div>
-                   <SideNavItem icon={<Users size={14}/>} label="User Management" active={activeTab === 'users'} onClick={() => setActiveTab('users')} />
+                   <SideNavItem icon={<Users size={14}/>} label="Users" active={activeTab === 'users'} onClick={() => setActiveTab('users')} />
+                   <SideNavItem icon={<Zap size={14}/>} label="Automations" active={activeTab === 'automation'} onClick={() => setActiveTab('automation')} />
                    <SideNavItem icon={<Database size={14}/>} label="Database" active={activeTab === 'schema'} onClick={() => setActiveTab('schema')} />
-                   <SideNavItem icon={<FolderLock size={14}/>} label="Storage" active={activeTab === 'storage'} onClick={() => setActiveTab('storage')} />
+                   <SideNavItem icon={<FolderLock size={14}/>} label="Vault Explorer" active={activeTab === 'storage'} onClick={() => setActiveTab('storage')} />
+                   <SideNavItem icon={<DollarSign size={14}/>} label="Billing" active={activeTab === 'billing'} onClick={() => setActiveTab('billing')} />
                 </>
              )}
          </nav>
@@ -261,7 +305,7 @@ export default function Dashboard() {
 
       <div className="flex-1 flex flex-col h-screen overflow-y-auto bg-slate-50 dark:bg-background">
         <nav className="border-b border-slate-200 dark:border-white/5 bg-background/50 backdrop-blur-xl px-8 py-4 sticky top-0 z-50 flex justify-between items-center text-foreground">
-            <h1 className="text-xs font-black tracking-widest uppercase italic leading-none">GRID <span className="text-orange-500">OP-CENTER</span></h1>
+            <h1 className="text-xs font-black tracking-widest uppercase italic leading-none">COMMAND <span className="text-primary">DASHBOARD</span></h1>
             <div className="flex items-center gap-6">
                 <div className="relative">
                     <button onClick={() => setShowNotifications(!showNotifications)} className="p-2 rounded-xl bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/5 text-slate-500 hover:text-primary transition-all active:scale-95 relative">
@@ -298,14 +342,31 @@ export default function Dashboard() {
                         <h2 className="text-3xl font-black italic tracking-tighter uppercase leading-none">Sales <span className="text-primary">Pipeline</span></h2>
                         <p className="text-slate-500 text-[10px] font-bold italic opacity-60 uppercase mt-1">Manage leads and deal progress.</p>
                     </div>
-                    <button onClick={() => setIsAddLeadModalOpen(true)} className="bg-primary text-primary-foreground px-6 py-2 rounded-xl text-[10px] font-black uppercase italic shadow-lg shadow-primary/20 active:scale-95 transition-all">Create New Lead</button>
+                    <div className="flex items-center gap-4">
+                        <div className="relative">
+                            <Search className="absolute left-3 top-2.5 text-slate-500" size={14}/>
+                            <input value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-white/5 rounded-xl p-2 pl-10 text-[10px] font-black italic uppercase outline-none focus:border-primary w-48 transition-all focus:w-64" placeholder="Quick Search..." />
+                        </div>
+                        <button onClick={() => setIsAddLeadModalOpen(true)} className="bg-primary text-primary-foreground px-6 py-2 rounded-xl text-[10px] font-black uppercase italic shadow-lg shadow-primary/20 active:scale-95 transition-all">Create New Lead</button>
+                    </div>
                 </header>
+
+                {selectedLeads.length > 0 && (
+                    <div className="bg-primary p-4 rounded-3xl flex justify-between items-center animate-in slide-in-from-top-4 duration-300 shadow-xl shadow-primary/20">
+                        <div className="text-[10px] font-black text-primary-foreground uppercase italic">{selectedLeads.length} items selected</div>
+                        <div className="flex gap-4">
+                            <button onClick={() => setSelectedLeads([])} className="text-[10px] font-black text-primary-foreground/60 uppercase italic hover:text-primary-foreground transition-colors">Clear Selection</button>
+                            <button onClick={() => bulkUpdateStatus('Won')} className="text-[10px] font-black text-primary-foreground uppercase italic px-4 py-2 bg-white/10 rounded-xl hover:bg-white/20 transition-all">Move to Won</button>
+                            <button onClick={bulkDeleteLeads} className="text-[10px] font-black text-white px-4 py-2 bg-red-500 rounded-xl hover:bg-red-400 transition-all shadow-lg active:scale-95">Bulk Expunge</button>
+                        </div>
+                    </div>
+                )}
                 
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-                    <KanbanCol title="New Leads" leads={leads.filter(l => l.status === 'New')} status="New" onDrop={updateLeadStatus} />
-                    <KanbanCol title="In Progress" leads={leads.filter(l => l.status === 'Contacted')} status="Contacted" onDrop={updateLeadStatus} />
-                    <KanbanCol title="Negotiation" leads={leads.filter(l => l.status === 'Qualified')} status="Qualified" onDrop={updateLeadStatus} />
-                    <KanbanCol title="Closed Won" leads={leads.filter(l => l.status === 'Won')} status="Won" onDrop={updateLeadStatus} />
+                    <KanbanCol title="New Leads" leads={leads.filter(l => l.status === 'New' && l.company_name.toLowerCase().includes(searchTerm.toLowerCase()))} status="New" onDrop={updateLeadStatus} selectedLeads={selectedLeads} onSelect={(id: string) => setSelectedLeads(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id])} />
+                    <KanbanCol title="In Progress" leads={leads.filter(l => l.status === 'Contacted' && l.company_name.toLowerCase().includes(searchTerm.toLowerCase()))} status="Contacted" onDrop={updateLeadStatus} selectedLeads={selectedLeads} onSelect={(id: string) => setSelectedLeads(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id])} />
+                    <KanbanCol title="Negotiation" leads={leads.filter(l => l.status === 'Qualified' && l.company_name.toLowerCase().includes(searchTerm.toLowerCase()))} status="Qualified" onDrop={updateLeadStatus} selectedLeads={selectedLeads} onSelect={(id: string) => setSelectedLeads(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id])} />
+                    <KanbanCol title="Closed Won" leads={leads.filter(l => l.status === 'Won' && l.company_name.toLowerCase().includes(searchTerm.toLowerCase()))} status="Won" onDrop={updateLeadStatus} selectedLeads={selectedLeads} onSelect={(id: string) => setSelectedLeads(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id])} />
                 </div>
              </div>
           )}
@@ -337,7 +398,7 @@ export default function Dashboard() {
                                       </td>
                                       <td className="px-6 py-4 text-[10px] font-black italic text-slate-500 uppercase">{new Date(t.due_at).toLocaleDateString()}</td>
                                       <td className="px-6 py-4">
-                                          <span className="px-2 py-1 rounded-md text-[8px] font-black uppercase italic bg-orange-500/10 text-orange-500 border border-orange-500/20">{t.priority}</span>
+                                          <span className="px-2 py-1 rounded-md text-[8px] font-black uppercase italic bg-primary/10 text-primary border border-primary/20">{t.priority}</span>
                                       </td>
                                   </tr>
                               ))}
@@ -350,7 +411,7 @@ export default function Dashboard() {
           {activeTab === 'contacts' && (
               <div className="space-y-8 animate-in fade-in duration-300">
                   <header>
-                      <h2 className="text-3xl font-black italic tracking-tighter uppercase leading-none">Contact <span className="text-orange-500">Directory</span></h2>
+                      <h2 className="text-3xl font-black italic tracking-tighter uppercase leading-none">Contact <span className="text-primary">Directory</span></h2>
                       <p className="text-slate-500 text-[10px] font-bold italic opacity-60 uppercase mt-1">Personnel details across all identified companies.</p>
                   </header>
                   <div className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-white/5 rounded-3xl p-12 text-center shadow-xl">
@@ -365,7 +426,7 @@ export default function Dashboard() {
               <div className="space-y-8 animate-in fade-in duration-300">
                   <header className="flex justify-between items-end">
                       <div>
-                          <h2 className="text-3xl font-black italic tracking-tighter uppercase leading-none">Lead <span className="text-orange-500">Discovery</span></h2>
+                          <h2 className="text-3xl font-black italic tracking-tighter uppercase leading-none">Lead <span className="text-primary">Discovery</span></h2>
                           <p className="text-slate-500 text-[10px] font-bold italic opacity-60 uppercase mt-1">Automated internet intelligence gathering.</p>
                       </div>
                   </header>
@@ -382,7 +443,7 @@ export default function Dashboard() {
                                    <label className="text-[9px] font-black uppercase text-slate-500 italic tracking-widest ml-1">Target Location</label>
                                    <input value={huntParams.location} onChange={e => setHuntParams({...huntParams, location: e.target.value})} className="w-full bg-slate-50 dark:bg-slate-900 border border-white/5 rounded-xl p-3 text-[10px] font-black italic uppercase outline-none focus:border-orange-500 mt-1" placeholder="City, State" />
                                </div>
-                               <button onClick={triggerHunt} disabled={isHunting} className="w-full py-4 bg-orange-600 hover:bg-orange-500 text-white rounded-2xl text-[11px] font-black uppercase italic shadow-xl shadow-orange-500/20 active:scale-95 transition-all flex items-center justify-center gap-3">
+                               <button onClick={triggerHunt} disabled={isHunting} className="w-full py-4 bg-primary text-primary-foreground rounded-2xl text-[11px] font-black uppercase italic shadow-xl shadow-primary/20 active:scale-95 transition-all flex items-center justify-center gap-3">
                                    {isHunting ? <RefreshCw className="animate-spin" size={16}/> : <Search size={16}/>}
                                    {isHunting ? 'Analyzing Grid...' : 'Find New Leads'}
                                </button>
@@ -394,7 +455,7 @@ export default function Dashboard() {
                                   <div className="w-16 h-16 bg-green-500/10 text-green-500 rounded-full flex items-center justify-center mb-4 mx-auto"><CheckCircle size={32}/></div>
                                   <h3 className="text-2xl font-black italic uppercase tracking-tighter">Scan Complete</h3>
                                   <p className="text-[10px] text-slate-500 font-bold uppercase italic mt-2">Discovered {huntResult.length} new prospects matching parameters.</p>
-                                  <button onClick={() => setActiveTab('crm')} className="mt-6 text-orange-500 font-black italic uppercase text-[10px] tracking-widest hover:underline">View in Pipeline →</button>
+                                  <button onClick={() => setActiveTab('crm')} className="mt-6 text-primary font-black italic uppercase text-[10px] tracking-widest hover:underline">View in Pipeline →</button>
                               </div>
                           ) : (
                               <>
@@ -412,7 +473,7 @@ export default function Dashboard() {
               <div className="space-y-8 animate-in fade-in duration-300">
                   <header className="flex justify-between items-end">
                       <div>
-                          <h2 className="text-3xl font-black italic tracking-tighter uppercase leading-none">User <span className="text-orange-500">Management</span></h2>
+                          <h2 className="text-3xl font-black italic tracking-tighter uppercase leading-none">User <span className="text-primary">Management</span></h2>
                           <p className="text-slate-500 text-[10px] font-bold italic opacity-60 uppercase mt-1">Manage personnel access and roles.</p>
                       </div>
                       <button onClick={() => { setTargetStaff(null); setStaffData({email:'', password:'', role:'staff'}); setIsStaffModalOpen(true); }} className="bg-primary text-primary-foreground px-6 py-2 rounded-xl text-[10px] font-black uppercase italic shadow-lg shadow-primary/20 active:scale-95 transition-all flex items-center gap-2"><PlusCircle size={14}/> Provision User</button>
@@ -445,7 +506,7 @@ export default function Dashboard() {
                                       <td className="px-6 py-4 text-[10px] font-black italic text-slate-500 uppercase">{new Date(u.created_at).toLocaleDateString()}</td>
                                       <td className="px-6 py-4 text-right">
                                           <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-all">
-                                              <button onClick={() => { setTargetStaff(u); setStaffData({email: u.email, password: '', role: u.role}); setIsStaffModalOpen(true); }} className="p-2 bg-blue-500/10 text-blue-500 rounded-lg hover:bg-blue-500 hover:text-white transition-all"><Settings size={14}/></button>
+                                              <button onClick={() => { setTargetStaff(u); setStaffData({email: u.email, password: '', role: u.role}); setIsStaffModalOpen(true); }} className="p-2 bg-primary/10 text-primary rounded-lg hover:bg-primary hover:text-white transition-all"><Settings size={14}/></button>
                                               <button onClick={() => deleteStaff(u.id)} className="p-2 bg-red-500/10 text-red-500 rounded-lg hover:bg-red-500 hover:text-white transition-all"><Trash2 size={14}/></button>
                                           </div>
                                       </td>
@@ -457,16 +518,115 @@ export default function Dashboard() {
               </div>
           )}
 
+          {activeTab === 'schema' && isAdmin && (
+              <div className="space-y-8 animate-in fade-in duration-300">
+                  <header>
+                      <h2 className="text-3xl font-black italic tracking-tighter uppercase leading-none">Security <span className="text-primary">Audit Log</span></h2>
+                      <p className="text-slate-500 text-[10px] font-bold italic opacity-60 uppercase mt-1">Global activity monitoring.</p>
+                  </header>
+                  <div className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-white/5 rounded-3xl overflow-hidden shadow-xl">
+                      <table className="w-full text-left">
+                          <thead className="bg-slate-50 dark:bg-slate-900/50 border-b border-white/5">
+                              <tr>
+                                  <th className="px-6 py-4 text-[10px] font-black uppercase italic text-slate-500 tracking-widest">Event</th>
+                                  <th className="px-6 py-4 text-[10px] font-black uppercase italic text-slate-500 tracking-widest">Entity</th>
+                                  <th className="px-6 py-4 text-[10px] font-black uppercase italic text-slate-500 tracking-widest">Operator</th>
+                                  <th className="px-6 py-4 text-[10px] font-black uppercase italic text-slate-500 tracking-widest">Timestamp</th>
+                              </tr>
+                          </thead>
+                          <tbody>
+                              {auditLogs.map((log: any) => (
+                                  <tr key={log.id} className="border-b border-white/5 hover:bg-slate-50 dark:hover:bg-slate-900/30 transition-all">
+                                      <td className="px-6 py-4">
+                                          <div className="text-[11px] font-black italic uppercase text-foreground">{log.r2_key ? 'File Upload' : 'Lead Modified'}</div>
+                                          <div className="text-[8px] text-slate-500 font-bold uppercase italic opacity-60 truncate max-w-[200px]">{log.r2_key || 'DB Entry System'}</div>
+                                      </td>
+                                      <td className="px-6 py-4">
+                                          <div className="text-[11px] font-black italic uppercase text-primary">{log.company_name || 'System Level'}</div>
+                                      </td>
+                                      <td className="px-6 py-4 text-[10px] font-black italic text-slate-500 uppercase">{log.created_by?.split('@')[0]}</td>
+                                      <td className="px-6 py-4 text-[10px] font-black italic text-slate-500 uppercase">{new Date(log.created_at).toLocaleString()}</td>
+                                  </tr>
+                              ))}
+                              {auditLogs.length === 0 && <tr><td colSpan={4} className="text-center py-12 text-slate-500 italic opacity-50 uppercase font-black text-[10px]">No audit history detected on grid.</td></tr>}
+                          </tbody>
+                      </table>
+                  </div>
+              </div>
+          )}
+
           {activeTab === 'reports' && (
               <div className="space-y-8 animate-in fade-in duration-300">
                   <header>
-                      <h2 className="text-3xl font-black italic tracking-tighter uppercase leading-none">Intelligence <span className="text-orange-500">Analytics</span></h2>
-                      <p className="text-slate-500 text-[10px] font-bold italic opacity-60 uppercase mt-1">Strategic Grid Performance Matrix.</p>
+                      <h2 className="text-3xl font-black italic tracking-tighter uppercase leading-none">Intelligence <span className="text-primary">Analytics</span></h2>
+                      <p className="text-slate-500 text-[10px] font-bold italic opacity-60 uppercase mt-1">Strategic Performance Matrix.</p>
                   </header>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                       <ReportCard title="Sales Pipeline" val={`$${crmStats.pipe_value?.toLocaleString()}`} trend="+12% weekly" icon={<TrendingUp size={24}/>} />
-                      <ReportCard title="Nodes In Grid" val={leads.length} trend="Active Scouting" icon={<Search size={24}/>} />
+                      <ReportCard title="Prospects" val={leads.length} trend="Active Scanning" icon={<Search size={24}/>} />
                       <ReportCard title="Conversion" val={`${((crmStats.won_count / (leads.length || 1)) * 100).toFixed(1)}%`} trend="Win Velocity" icon={<DollarSign size={24}/>} />
+                  </div>
+              </div>
+          )}
+
+          {activeTab === 'automation' && isAdmin && (
+              <div className="space-y-8 animate-in fade-in duration-300">
+                  <header className="flex justify-between items-end">
+                      <div>
+                          <h2 className="text-3xl font-black italic tracking-tighter uppercase leading-none">System <span className="text-primary">Automations</span></h2>
+                          <p className="text-slate-500 text-[10px] font-bold italic opacity-60 uppercase mt-1">Configure event-driven workflow rules.</p>
+                      </div>
+                      <button className="bg-primary text-primary-foreground px-6 py-2 rounded-xl text-[10px] font-black uppercase italic shadow-lg shadow-primary/20 active:scale-95 transition-all flex items-center gap-2"><PlusCircle size={14}/> Create Workflow</button>
+                  </header>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      {workflows.map(wf => (
+                          <div key={wf.id} className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-white/5 p-6 rounded-3xl shadow-xl space-y-4">
+                              <div className="flex justify-between items-start">
+                                  <div className="p-3 bg-primary/10 text-primary rounded-2xl"><Zap size={20}/></div>
+                                  <button onClick={() => deleteWorkflow(wf.id)} className="p-2 text-slate-500 hover:text-red-500 transition-colors"><Trash2 size={16}/></button>
+                              </div>
+                              <div>
+                                  <h3 className="text-lg font-black italic uppercase tracking-tighter">{wf.name}</h3>
+                                  <div className="flex items-center gap-2 mt-1">
+                                      <span className="text-[7px] font-black uppercase px-2 py-0.5 bg-slate-100 dark:bg-slate-900 text-slate-500 rounded">{wf.trigger_type}</span>
+                                      <span className="text-[7px] font-black uppercase px-2 py-0.5 bg-primary/10 text-primary rounded">{wf.action_type}</span>
+                                  </div>
+                              </div>
+                              <p className="text-[10px] text-slate-500 font-bold uppercase italic opacity-60">
+                                  If {wf.trigger_type} is {wf.trigger_value}, then {wf.action_type.replace('_', ' ')}.
+                              </p>
+                          </div>
+                      ))}
+                      {workflows.length === 0 && <p className="col-span-full text-center py-12 text-slate-500 italic opacity-50 uppercase font-black text-[10px]">No automated workflows active.</p>}
+                  </div>
+              </div>
+          )}
+
+          {activeTab === 'billing' && isAdmin && (
+              <div className="space-y-8 animate-in fade-in duration-300">
+                  <header>
+                      <h2 className="text-3xl font-black italic tracking-tighter uppercase leading-none">Financial <span className="text-primary">Oversight</span></h2>
+                      <p className="text-slate-500 text-[10px] font-bold italic opacity-60 uppercase mt-1">Manage subscription and resource usage.</p>
+                  </header>
+                  <div className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-white/5 p-12 rounded-[40px] shadow-xl space-y-8">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
+                          <div className="space-y-4">
+                              <div className="text-[10px] font-black uppercase text-slate-500 italic tracking-widest pl-1">Active Subscription</div>
+                              <div className="p-6 bg-slate-50 dark:bg-slate-900/50 rounded-3xl border border-white/5">
+                                  <h3 className="text-2xl font-black italic uppercase tracking-tighter text-primary">{billingInfo.plan}</h3>
+                                  <p className="text-[10px] font-bold text-slate-500 uppercase italic mt-1">{billingInfo.cycle} Billing Cycle</p>
+                              </div>
+                          </div>
+                          <div className="space-y-4">
+                              <div className="text-[10px] font-black uppercase text-slate-500 italic tracking-widest pl-1">Next Settlement</div>
+                              <div className="p-6 bg-slate-50 dark:bg-slate-900/50 rounded-3xl border border-white/5">
+                                  <h3 className="text-2xl font-black italic uppercase tracking-tighter">{billingInfo.amount}</h3>
+                                  <p className="text-[10px] font-bold text-slate-500 uppercase italic mt-1">Due on {billingInfo.nextBill}</p>
+                              </div>
+                          </div>
+                      </div>
+                      <button className="w-full py-4 bg-slate-100 dark:bg-slate-900 text-slate-500 hover:text-foreground rounded-2xl text-[10px] font-black uppercase italic transition-all">Access Stripe Customer Portal</button>
                   </div>
               </div>
           )}
@@ -480,8 +640,8 @@ export default function Dashboard() {
               <div className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-white/10 w-full max-w-md rounded-[40px] p-8 shadow-2xl space-y-8 animate-in zoom-in-95 duration-200">
                   <div className="flex justify-between items-center">
                     <div>
-                        <h3 className="text-2xl font-black italic uppercase tracking-tighter leading-none">Identity <span className="text-orange-500">Profile</span></h3>
-                        <p className="text-[9px] font-bold text-slate-500 uppercase italic mt-1">Modify access keys and login nodes.</p>
+                        <h3 className="text-2xl font-black italic uppercase tracking-tighter leading-none">Identity <span className="text-primary">Profile</span></h3>
+                        <p className="text-[9px] font-bold text-slate-500 uppercase italic mt-1">Modify access keys and login credentials.</p>
                     </div>
                     <button onClick={() => setIsSettingsModalOpen(false)} className="p-2 bg-slate-100 dark:bg-slate-900 rounded-xl text-slate-500"><X size={18}/></button>
                   </div>
@@ -495,20 +655,20 @@ export default function Dashboard() {
                                 <input type="password" placeholder="Current Password" value={settingsData.oldPassword} onChange={e => setSettingsData({...settingsData, oldPassword: e.target.value})} className="w-full bg-slate-50 dark:bg-slate-900 border border-white/5 rounded-xl p-2.5 pl-10 text-[10px] font-black italic uppercase" />
                              </div>
                              <div className="relative">
-                                <Key className="absolute left-3 top-2.5 text-orange-500" size={14}/>
-                                <input type="password" placeholder="New Password" value={settingsData.newPassword} onChange={e => setSettingsData({...settingsData, newPassword: e.target.value})} className="w-full bg-slate-50 dark:bg-slate-900 border border-white/5 rounded-xl p-2.5 pl-10 text-[10px] font-black italic uppercase border-orange-500/20" />
+                                <Key className="absolute left-3 top-2.5 text-primary" size={14}/>
+                                <input type="password" placeholder="New Password" value={settingsData.newPassword} onChange={e => setSettingsData({...settingsData, newPassword: e.target.value})} className="w-full bg-slate-50 dark:bg-slate-900 border border-white/5 rounded-xl p-2.5 pl-10 text-[10px] font-black italic uppercase border-primary/20" />
                              </div>
-                             <button onClick={() => handleSelfUpdate('password')} className="w-full py-2.5 bg-orange-600 hover:bg-orange-500 text-white rounded-xl text-[10px] font-black uppercase italic shadow-lg shadow-orange-500/20 transition-all active:scale-95">Update Password</button>
+                             <button onClick={() => handleSelfUpdate('password')} className="w-full py-2.5 bg-primary text-primary-foreground rounded-xl text-[10px] font-black uppercase italic shadow-lg shadow-primary/20 transition-all active:scale-95">Update Password</button>
                           </div>
                       </div>
 
                       <div className="pt-6 border-t border-white/5 space-y-4">
                         <label className="text-[9px] font-black uppercase text-slate-500 italic tracking-widest pl-1">Email Address</label>
                         <div className="relative">
-                            <MailIcon className="absolute left-3 top-2.5 text-blue-500" size={14}/>
-                            <input type="email" placeholder="New Email Address" value={settingsData.newEmail} onChange={e => setSettingsData({...settingsData, newEmail: e.target.value})} className="w-full bg-slate-50 dark:bg-slate-900 border border-white/5 rounded-xl p-2.5 pl-10 text-[10px] font-black italic uppercase border-blue-500/20" />
+                            <MailIcon className="absolute left-3 top-2.5 text-primary" size={14}/>
+                            <input type="email" placeholder="New Email Address" value={settingsData.newEmail} onChange={e => setSettingsData({...settingsData, newEmail: e.target.value})} className="w-full bg-slate-50 dark:bg-slate-900 border border-white/5 rounded-xl p-2.5 pl-10 text-[10px] font-black italic uppercase border-primary/20" />
                         </div>
-                        <button onClick={() => handleSelfUpdate('email')} className="w-full py-2.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-[10px] font-black uppercase italic shadow-lg shadow-blue-500/20 transition-all active:scale-95">Update Email</button>
+                        <button onClick={() => handleSelfUpdate('email')} className="w-full py-2.5 bg-primary text-primary-foreground rounded-xl text-[10px] font-black uppercase italic shadow-lg shadow-primary/20 transition-all active:scale-95">Update Email</button>
                       </div>
                   </div>
               </div>
@@ -520,7 +680,7 @@ export default function Dashboard() {
               <form onSubmit={updateStaff} className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-white/10 w-full max-w-md rounded-[40px] p-8 shadow-2xl space-y-8 animate-in zoom-in-95 duration-200">
                   <div className="flex justify-between items-center">
                     <div>
-                        <h3 className="text-2xl font-black italic uppercase tracking-tighter leading-none">{targetStaff ? 'Modify' : 'Provision'} <span className="text-orange-500">Staff</span></h3>
+                        <h3 className="text-2xl font-black italic uppercase tracking-tighter leading-none">{targetStaff ? 'Modify' : 'Provision'} <span className="text-primary">Staff</span></h3>
                         <p className="text-[9px] font-bold text-slate-500 uppercase italic mt-1">Personnel Account Management.</p>
                     </div>
                     <button type="button" onClick={() => setIsStaffModalOpen(false)} className="p-2 bg-slate-100 dark:bg-slate-900 rounded-xl text-slate-500"><X size={18}/></button>
@@ -529,22 +689,22 @@ export default function Dashboard() {
                   <div className="space-y-4">
                       <div className="space-y-1.5">
                         <span className="text-[8px] font-black uppercase italic text-slate-500 tracking-widest ml-1">Email Address</span>
-                        <input type="email" required value={staffData.email} onChange={e => setStaffData({...staffData, email:e.target.value})} className="w-full bg-slate-50 dark:bg-slate-900 border border-white/5 rounded-xl p-3 text-[10px] font-black italic uppercase outline-none focus:border-orange-500" placeholder="STAFF EMAIL" />
+                        <input type="email" required value={staffData.email} onChange={e => setStaffData({...staffData, email:e.target.value})} className="w-full bg-slate-50 dark:bg-slate-900 border border-white/5 rounded-xl p-3 text-[10px] font-black italic uppercase outline-none focus:border-primary" placeholder="STAFF EMAIL" />
                       </div>
                       <div className="space-y-1.5">
                         <span className="text-[8px] font-black uppercase italic text-slate-500 tracking-widest ml-1">{targetStaff ? 'Reset Password (Optional)' : 'Password'}</span>
-                        <input type="password" required={!targetStaff} value={staffData.password} onChange={e => setStaffData({...staffData, password:e.target.value})} className="w-full bg-slate-50 dark:bg-slate-900 border border-white/5 rounded-xl p-3 text-[10px] font-black italic uppercase outline-none focus:border-orange-500" placeholder="PASSWORD" />
+                        <input type="password" required={!targetStaff} value={staffData.password} onChange={e => setStaffData({...staffData, password:e.target.value})} className="w-full bg-slate-50 dark:bg-slate-900 border border-white/5 rounded-xl p-3 text-[10px] font-black italic uppercase outline-none focus:border-primary" placeholder="PASSWORD" />
                       </div>
                       <div className="space-y-1.5">
                         <span className="text-[8px] font-black uppercase italic text-slate-500 tracking-widest ml-1">Access Authorization</span>
-                        <select value={staffData.role} onChange={e => setStaffData({...staffData, role:e.target.value})} className="w-full bg-slate-50 dark:bg-slate-900 border border-white/5 rounded-xl p-3 text-[10px] font-black italic uppercase outline-none focus:border-orange-500 appearance-none">
+                        <select value={staffData.role} onChange={e => setStaffData({...staffData, role:e.target.value})} className="w-full bg-slate-50 dark:bg-slate-900 border border-white/5 rounded-xl p-3 text-[10px] font-black italic uppercase outline-none focus:border-primary appearance-none">
                             <option value="staff">Standard Staff Ops</option>
                             <option value="admin">Grid Administrator</option>
                         </select>
                       </div>
                   </div>
 
-                  <button type="submit" className="w-full py-4 bg-orange-600 hover:bg-orange-500 text-white rounded-2xl text-[11px] font-black uppercase italic shadow-xl shadow-orange-500/20 active:scale-95 transition-all">
+                  <button type="submit" className="w-full py-4 bg-primary text-primary-foreground rounded-2xl text-[11px] font-black uppercase italic shadow-xl shadow-primary/20 active:scale-95 transition-all">
                       {targetStaff ? 'Authorize Modification' : 'Commission New Personnel'}
                   </button>
               </form>
@@ -580,9 +740,9 @@ function SideNavItem({ icon, label, active, onClick }: any) {
     return (
         <div 
             onClick={onClick}
-            className={`flex items-center gap-3 px-4 py-2.5 rounded-lg cursor-pointer transition-all duration-200 group ${active ? 'bg-orange-500 text-white shadow-lg shadow-orange-500/20' : 'text-slate-500 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-900/40 hover:text-orange-500'}`}
+            className={`flex items-center gap-3 px-4 py-2.5 rounded-lg cursor-pointer transition-all duration-200 group ${active ? 'bg-primary text-primary-foreground shadow-lg shadow-primary/20' : 'text-slate-500 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-900/40 hover:text-primary'}`}
         >
-            <div className={`${active ? 'text-white' : 'group-hover:text-orange-500'}`}>{icon}</div>
+            <div className={`${active ? 'text-primary-foreground' : 'group-hover:text-primary'}`}>{icon}</div>
             <span className="font-black italic uppercase text-[9px] tracking-widest">{label}</span>
         </div>
     );
@@ -613,9 +773,7 @@ function ReportCard({ title, val, trend, icon }: any) {
             </div>
         </div>
     );
-}
-
-function KanbanCol({ title, leads, status, onDrop }: any) {
+}function KanbanCol({ title, leads, status, onDrop, selectedLeads, onSelect }: any) {
     const handleDragOver = (e: any) => e.preventDefault();
     const handleDrop = (e: any) => {
         const id = e.dataTransfer.getData('leadId');
@@ -630,7 +788,7 @@ function KanbanCol({ title, leads, status, onDrop }: any) {
         >
             <div className="flex justify-between items-center mb-4 pl-1">
                 <h4 className="text-[9px] font-black uppercase italic tracking-widest text-slate-500">{title}</h4>
-                <div className="text-[8px] font-black opacity-30 italic">{leads.length} NODES</div>
+                <div className="text-[8px] font-black opacity-30 italic">{leads.length} Prospects</div>
             </div>
             <div className="space-y-3 flex-1">
                 {leads.map((l: any) => (
@@ -638,10 +796,13 @@ function KanbanCol({ title, leads, status, onDrop }: any) {
                         key={l.id} 
                         draggable 
                         onDragStart={(e) => e.dataTransfer.setData('leadId', l.id)}
-                        className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-white/10 p-4 rounded-xl shadow-md cursor-grab active:cursor-grabbing hover:border-orange-500/30 transition-all group"
+                        className={`bg-white dark:bg-slate-950 border p-4 rounded-xl shadow-md cursor-grab active:cursor-grabbing transition-all group ${selectedLeads.includes(l.id) ? 'border-primary ring-1 ring-primary/20' : 'border-slate-200 dark:border-white/10 hover:border-primary/30'}`}
                     >
                         <div className="flex justify-between items-center mb-1">
-                            <span className={`text-[8px] font-black uppercase px-2 py-0.5 rounded ${l.ai_score > 80 ? 'bg-red-500/10 text-red-500 font-bold' : 'bg-primary/10 text-primary font-bold'}`}>{l.ai_score} RISK</span>
+                            <div className="flex items-center gap-2">
+                                <input type="checkbox" checked={selectedLeads.includes(l.id)} onChange={() => onSelect(l.id)} className="w-3 h-3 rounded border-white/10 bg-slate-100 dark:bg-slate-900 accent-primary cursor-pointer" />
+                                <span className={`text-[8px] font-black uppercase px-2 py-0.5 rounded ${l.ai_score > 80 ? 'bg-red-500/10 text-red-500 font-bold' : 'bg-primary/10 text-primary font-bold'}`}>{l.ai_score} RISK</span>
+                            </div>
                             <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-all">
                                 <Link to={`/lead/${l.id}`} className="text-slate-400 hover:text-primary"><ChevronRight size={14}/></Link>
                             </div>
@@ -652,4 +813,6 @@ function KanbanCol({ title, leads, status, onDrop }: any) {
             </div>
         </div>
     );
+}
+
 }

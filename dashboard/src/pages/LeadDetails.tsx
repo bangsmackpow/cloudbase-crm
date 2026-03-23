@@ -323,7 +323,9 @@ export default function LeadDetails() {
                             <div className="flex items-center gap-3 overflow-hidden">
                                 <FileText size={20} className="text-blue-500 flex-shrink-0" />
                                 <div className="truncate">
-                                    <div className="text-[9px] font-black italic uppercase truncate text-foreground">{f.r2_key.split('-').slice(1).join('-')}</div>
+                                    <div className="text-[9px] font-black italic uppercase truncate text-foreground">
+                                        {f.r2_key.includes('/') ? f.r2_key.split('/').pop()?.substring(37) : f.r2_key}
+                                    </div>
                                     <div className="text-[7px] text-slate-500 font-bold uppercase tracking-widest italic">{new Date(f.created_at).toLocaleDateString()}</div>
                                 </div>
                             </div>
