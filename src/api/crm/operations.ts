@@ -26,11 +26,19 @@ crm.get('/stats', async (c) => {
   });
 });
 
-// --- CONVERT TO CUSTOMER ---
+// --- CREATE LEAD ---
 crm.post('/leads', async (c) => {
   const user = c.get('jwtPayload');
   const { company_name, website_url, status } = await c.req.json();
   const id = crypto.randomUUID();
+
+  await c.env.DB.prepare(
+    "INSERT INTO leads (id, company_name, website_url, status, tenant_id, ai_score) VALUES (?, ?, ?, ?, ?, ?)"
+  ).bind(id, company_name, website_url, status || 'New', user.tenant_id, 0).run();
+
+  await c.env.DB.prepare(
+      "INSERT INTO activities (id, lead_id, tenant_id, type, content) VALUES (?, ?, ?, ?, ?)"
+  ).bind(crypto.randomUUID(), id, user.tenant_id, 'Protocol Initiated', `Newly provisioned node entered the grid.`).run();
 
   return c.json({ success: true, id });
 });
@@ -177,6 +185,19 @@ crm.get('/contacts/:leadId', async (c) => {
   return c.json(results);
 });
 
+crm.post('/contacts/:leadId', async (c) => {
+    const leadId = c.req.param('leadId');
+    const user = c.get('jwtPayload');
+    const { first_name, last_name, title, email, phone } = await c.req.json();
+    const id = crypto.randomUUID();
+
+    await c.env.DB.prepare(
+        "INSERT INTO contacts (id, lead_id, tenant_id, first_name, last_name, title, email, phone) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
+    ).bind(id, leadId, user.tenant_id, first_name, last_name, title, email, phone).run();
+
+    return c.json({ success: true, id });
+});
+
 crm.delete('/contacts/:id', async (c) => {
   const id = c.req.param('id');
   const user = c.get('jwtPayload');
@@ -230,17 +251,18 @@ crm.post('/checkout/:id', async (c) => {
         "SELECT company_name, deal_value FROM leads WHERE id = ? AND tenant_id = ?"
     ).bind(id, user.tenant_id).first();
     
-    if (!lead) return c.json({ error: "Node invalid" }, 404);
+    if (!lead) return c.json({ error: "Lead not found" }, 404);
 
     // 2. Stripe Checkout Integration (Native Fetch for zero-dep edge)
     const stripeKey = c.env.STRIPE_SECRET_KEY;
     const amount = (lead.deal_value || 1500) * 100; // in cents
+    const origin = c.req.header('origin') || 'http://localhost:5173';
 
     const params = new URLSearchParams({
-        'success_url': `http://localhost:5173/lead/${id}?payment=success`,
-        'cancel_url': `http://localhost:5173/lead/${id}?payment=failed`,
+        'success_url': `${origin}/lead/${id}?payment=success`,
+        'cancel_url': `${origin}/lead/${id}?payment=failed`,
         'line_items[0][price_data][currency]': 'usd',
-        'line_items[0][price_data][product_data][name]': `Technical Management: ${lead.company_name}`,
+        'line_items[0][price_data][product_data][name]': `Service Agreement: ${lead.company_name}`,
         'line_items[0][price_data][unit_amount]': amount.toString(),
         'line_items[0][quantity]': '1',
         'mode': 'payment'

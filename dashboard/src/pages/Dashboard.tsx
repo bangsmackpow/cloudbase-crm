@@ -210,44 +210,45 @@ export default function Dashboard() {
   const isAdmin = user?.role?.toLowerCase() === 'admin';
 
   return (
-    <div className="min-h-screen bg-background flex font-sans selection:bg-orange-500/30 overflow-hidden text-foreground">
+    <div className={`min-h-screen bg-background flex font-sans selection:bg-primary/30 overflow-hidden text-foreground ${theme}`}>
       
-      {/* 🛡️ Sidebar */}
+      {/* Sidebar */}
       <aside className="w-56 bg-slate-100 dark:bg-slate-950 border-r border-slate-200 dark:border-white/5 flex flex-col p-4 z-[60] transition-all">
          <div className="flex items-center gap-2 mb-8 pl-1">
-            <div className="bg-orange-500 p-2 rounded-lg shadow-xl shadow-orange-500/10">
-               <ShieldCheck size={18} className="text-white" />
+            <div className="bg-primary p-2 rounded-lg shadow-xl shadow-primary/10">
+               <ShieldCheck size={18} className="text-primary-foreground" />
             </div>
             <div>
                <h2 className="text-xs font-black italic leading-none">CLOUDBASE</h2>
-               <p className="text-[7px] text-orange-500 font-bold uppercase tracking-[0.2em] mt-0.5">Admin Ops v6.0</p>
+               <p className="text-[7px] text-primary font-bold uppercase tracking-[0.2em] mt-0.5">Admin Ops v6.0</p>
             </div>
          </div>
 
          <nav className="flex flex-col gap-0.5 flex-1">
-             <SideNavItem icon={<LayoutGrid size={14}/>} label="Pipeline" active={activeTab === 'crm'} onClick={() => setActiveTab('crm')} />
-             <SideNavItem icon={<CheckSquare size={14}/>} label="Missions" active={activeTab === 'tasks'} onClick={() => setActiveTab('tasks')} />
-             <SideNavItem icon={<Users size={14}/>} label="Identities" active={activeTab === 'contacts'} onClick={() => setActiveTab('contacts')} />
-             <SideNavItem icon={<PieChart size={14}/>} label="Analytics" active={activeTab === 'reports'} onClick={() => setActiveTab('reports')} />
+             <SideNavItem icon={<LayoutGrid size={14}/>} label="Leads" active={activeTab === 'crm'} onClick={() => setActiveTab('crm')} />
+             <SideNavItem icon={<CheckSquare size={14}/>} label="Tasks" active={activeTab === 'tasks'} onClick={() => setActiveTab('tasks')} />
+             <SideNavItem icon={<Users size={14}/>} label="Contacts" active={activeTab === 'contacts'} onClick={() => setActiveTab('contacts')} />
+             <SideNavItem icon={<Zap size={14}/>} label="Discovery" active={activeTab === 'hunter'} onClick={() => setActiveTab('hunter')} />
+             <SideNavItem icon={<PieChart size={14}/>} label="Reports" active={activeTab === 'reports'} onClick={() => setActiveTab('reports')} />
              
              {isAdmin && (
                 <>
-                   <div className="mt-6 mb-1 text-[7px] text-slate-400 dark:text-slate-700 font-bold uppercase tracking-[0.3em] italic pl-3">Admin Core</div>
-                   <SideNavItem icon={<Users size={14}/>} label="Staff Ops" active={activeTab === 'users'} onClick={() => setActiveTab('users')} />
-                   <SideNavItem icon={<Database size={14}/>} label="D1 Schema" active={activeTab === 'schema'} onClick={() => setActiveTab('schema')} />
-                   <SideNavItem icon={<FolderLock size={14}/>} label="R2 Vault" active={activeTab === 'storage'} onClick={() => setActiveTab('storage')} />
+                   <div className="mt-6 mb-1 text-[7px] text-slate-400 dark:text-slate-700 font-bold uppercase tracking-[0.3em] italic pl-3">Systems</div>
+                   <SideNavItem icon={<Users size={14}/>} label="User Management" active={activeTab === 'users'} onClick={() => setActiveTab('users')} />
+                   <SideNavItem icon={<Database size={14}/>} label="Database" active={activeTab === 'schema'} onClick={() => setActiveTab('schema')} />
+                   <SideNavItem icon={<FolderLock size={14}/>} label="Storage" active={activeTab === 'storage'} onClick={() => setActiveTab('storage')} />
                 </>
              )}
          </nav>
 
          <div className="pt-4 border-t border-slate-200 dark:border-white/5 space-y-3">
-            <div className="bg-slate-200 dark:bg-slate-900/50 p-1 rounded-lg flex justify-between">
-                <ThemeBtn active={theme === 'light'} onClick={() => setTheme('light')} icon={<Sun size={10}/>}/>
-                <ThemeBtn active={theme === 'dark'} onClick={() => setTheme('dark')} icon={<Moon size={10}/>}/>
-                <ThemeBtn active={theme === 'system'} onClick={() => setTheme('system')} icon={<Monitor size={10}/>}/>
+            <div className="bg-slate-200 dark:bg-slate-900/50 p-1 rounded-lg flex justify-between gap-1">
+                <ThemeBtn active={theme === 'light'} onClick={() => { setTheme('light'); localStorage.setItem('theme', 'light'); }} icon={<Sun size={10}/>} label="Arctic"/>
+                <ThemeBtn active={theme === 'dark'} onClick={() => { setTheme('dark'); localStorage.setItem('theme', 'dark'); }} icon={<Moon size={10}/>} label="Midnight"/>
+                <ThemeBtn active={theme === 'emerald'} onClick={() => { setTheme('emerald'); localStorage.setItem('theme', 'emerald'); }} icon={<Monitor size={10}/>} label="Executive"/>
             </div>
             <div className="p-2 rounded-lg flex gap-2 bg-slate-200 dark:bg-slate-900/40 border border-white/5">
-                <button onClick={() => setIsSettingsModalOpen(true)} className="w-6 h-6 rounded-md bg-orange-600 hover:bg-orange-500 transition-colors flex items-center justify-center text-white font-black text-[8px] italic">
+                <button onClick={() => setIsSettingsModalOpen(true)} className="w-6 h-6 rounded-md bg-primary hover:bg-primary/90 transition-colors flex items-center justify-center text-primary-foreground font-black text-[8px] italic">
                     <User size={12}/>
                 </button>
                 <div className="flex flex-col flex-1 overflow-hidden">
@@ -263,9 +264,9 @@ export default function Dashboard() {
             <h1 className="text-xs font-black tracking-widest uppercase italic leading-none">GRID <span className="text-orange-500">OP-CENTER</span></h1>
             <div className="flex items-center gap-6">
                 <div className="relative">
-                    <button onClick={() => setShowNotifications(!showNotifications)} className="p-2 rounded-xl bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/5 text-slate-500 hover:text-orange-500 transition-all active:scale-95 relative">
+                    <button onClick={() => setShowNotifications(!showNotifications)} className="p-2 rounded-xl bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/5 text-slate-500 hover:text-primary transition-all active:scale-95 relative">
                         <Bell size={16} />
-                        {notifications.length > 0 && <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 bg-orange-500 rounded-full border border-background"></span>}
+                        {notifications.length > 0 && <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 bg-primary rounded-full border border-background"></span>}
                     </button>
                     {showNotifications && (
                         <div className="absolute right-0 mt-4 w-72 bg-white dark:bg-slate-950 border border-slate-200 dark:border-white/5 rounded-3xl shadow-2xl p-4 overflow-hidden animate-in zoom-in-95 fade-in duration-200 z-[100]">
@@ -273,7 +274,7 @@ export default function Dashboard() {
                             <div className="space-y-2 max-h-64 overflow-y-auto">
                                 {notifications.map(n => (
                                     <div key={n.id} className="p-3 bg-slate-50 dark:bg-slate-900/50 rounded-2xl border border-white/5 space-y-1">
-                                        <div className="text-[7px] font-black text-orange-500 uppercase italic opacity-60">{n.type}</div>
+                                        <div className="text-[7px] font-black text-primary uppercase italic opacity-60">{n.type}</div>
                                         <p className="text-[9px] font-bold text-slate-400 italic leading-tight">{n.message}</p>
                                     </div>
                                 ))}
@@ -283,7 +284,7 @@ export default function Dashboard() {
                 </div>
                 <div className="flex items-center gap-2">
                     <div className={`w-1 h-1 rounded-full ${realtimeStatus === 'connected' ? 'bg-green-500' : 'bg-red-500 animate-pulse'}`}></div>
-                    <p className="text-[8px] text-slate-500 uppercase font-black tracking-widest italic">Global Matrix Pulse</p>
+                    <p className="text-[8px] text-slate-500 uppercase font-black tracking-widest italic">System Status</p>
                 </div>
             </div>
         </nav>
@@ -294,29 +295,127 @@ export default function Dashboard() {
              <div className="space-y-8">
                 <header className="flex justify-between items-end">
                     <div>
-                        <h2 className="text-3xl font-black italic tracking-tighter uppercase leading-none">Scout <span className="text-orange-500">Pipeline</span></h2>
-                        <p className="text-slate-500 text-[10px] font-bold italic opacity-60 uppercase mt-1">Autonomous Grid Node Discovery Engine.</p>
+                        <h2 className="text-3xl font-black italic tracking-tighter uppercase leading-none">Sales <span className="text-primary">Pipeline</span></h2>
+                        <p className="text-slate-500 text-[10px] font-bold italic opacity-60 uppercase mt-1">Manage leads and deal progress.</p>
                     </div>
-                    <button onClick={() => setIsAddLeadModalOpen(true)} className="bg-orange-500 text-white px-6 py-2 rounded-xl text-[10px] font-black uppercase italic shadow-lg shadow-orange-500/20 active:scale-95 transition-all">New Scout Protocol</button>
+                    <button onClick={() => setIsAddLeadModalOpen(true)} className="bg-primary text-primary-foreground px-6 py-2 rounded-xl text-[10px] font-black uppercase italic shadow-lg shadow-primary/20 active:scale-95 transition-all">Create New Lead</button>
                 </header>
                 
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
                     <KanbanCol title="New Leads" leads={leads.filter(l => l.status === 'New')} status="New" onDrop={updateLeadStatus} />
                     <KanbanCol title="In Progress" leads={leads.filter(l => l.status === 'Contacted')} status="Contacted" onDrop={updateLeadStatus} />
-                    <KanbanCol title="Critical" leads={leads.filter(l => l.status === 'Qualified')} status="Qualified" onDrop={updateLeadStatus} />
-                    <KanbanCol title="Won" leads={leads.filter(l => l.status === 'Won')} status="Won" onDrop={updateLeadStatus} />
+                    <KanbanCol title="Negotiation" leads={leads.filter(l => l.status === 'Qualified')} status="Qualified" onDrop={updateLeadStatus} />
+                    <KanbanCol title="Closed Won" leads={leads.filter(l => l.status === 'Won')} status="Won" onDrop={updateLeadStatus} />
                 </div>
              </div>
+          )}
+
+          {activeTab === 'tasks' && (
+              <div className="space-y-8 animate-in fade-in duration-300">
+                  <header>
+                      <h2 className="text-3xl font-black italic tracking-tighter uppercase leading-none">Queue <span className="text-orange-500">Management</span></h2>
+                      <p className="text-slate-500 text-[10px] font-bold italic opacity-60 uppercase mt-1">Upcoming tasks across all active leads.</p>
+                  </header>
+                  <div className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-white/5 rounded-3xl overflow-hidden shadow-xl">
+                      <table className="w-full text-left">
+                          <thead className="bg-slate-50 dark:bg-slate-900/50 border-b border-white/5">
+                              <tr>
+                                  <th className="px-6 py-4 text-[10px] font-black uppercase italic text-slate-500 tracking-widest">Task</th>
+                                  <th className="px-6 py-4 text-[10px] font-black uppercase italic text-slate-500 tracking-widest">Related Lead</th>
+                                  <th className="px-6 py-4 text-[10px] font-black uppercase italic text-slate-500 tracking-widest">Due Date</th>
+                                  <th className="px-6 py-4 text-[10px] font-black uppercase italic text-slate-500 tracking-widest">Priority</th>
+                              </tr>
+                          </thead>
+                          <tbody>
+                              {tasks.map(t => (
+                                  <tr key={t.id} className="border-b border-white/5 hover:bg-slate-50 dark:hover:bg-slate-900/30 transition-all">
+                                      <td className="px-6 py-4">
+                                          <div className="text-[11px] font-black italic uppercase text-foreground">{t.title}</div>
+                                      </td>
+                                      <td className="px-6 py-4">
+                                          <Link to={`/lead/${t.lead_id}`} className="text-[10px] font-bold text-orange-500 hover:underline uppercase italic">{t.company_name}</Link>
+                                      </td>
+                                      <td className="px-6 py-4 text-[10px] font-black italic text-slate-500 uppercase">{new Date(t.due_at).toLocaleDateString()}</td>
+                                      <td className="px-6 py-4">
+                                          <span className="px-2 py-1 rounded-md text-[8px] font-black uppercase italic bg-orange-500/10 text-orange-500 border border-orange-500/20">{t.priority}</span>
+                                      </td>
+                                  </tr>
+                              ))}
+                          </tbody>
+                      </table>
+                  </div>
+              </div>
+          )}
+
+          {activeTab === 'contacts' && (
+              <div className="space-y-8 animate-in fade-in duration-300">
+                  <header>
+                      <h2 className="text-3xl font-black italic tracking-tighter uppercase leading-none">Contact <span className="text-orange-500">Directory</span></h2>
+                      <p className="text-slate-500 text-[10px] font-bold italic opacity-60 uppercase mt-1">Personnel details across all identified companies.</p>
+                  </header>
+                  <div className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-white/5 rounded-3xl p-12 text-center shadow-xl">
+                      <Users size={48} className="mx-auto text-slate-200 dark:text-slate-800 mb-4" />
+                      <h3 className="text-xl font-black italic uppercase tracking-tighter">Global Contacts List</h3>
+                      <p className="text-[10px] text-slate-500 font-bold uppercase italic mt-2">Aggregate view coming soon. Please view contacts via individual leads.</p>
+                  </div>
+              </div>
+          )}
+
+          {activeTab === 'hunter' && (
+              <div className="space-y-8 animate-in fade-in duration-300">
+                  <header className="flex justify-between items-end">
+                      <div>
+                          <h2 className="text-3xl font-black italic tracking-tighter uppercase leading-none">Lead <span className="text-orange-500">Discovery</span></h2>
+                          <p className="text-slate-500 text-[10px] font-bold italic opacity-60 uppercase mt-1">Automated internet intelligence gathering.</p>
+                      </div>
+                  </header>
+                  <div className="grid grid-cols-1 md:grid-cols-12 gap-8">
+                      <div className="md:col-span-4 bg-white dark:bg-slate-950 border border-slate-200 dark:border-white/5 p-8 rounded-[40px] shadow-xl space-y-6">
+                           <div className="space-y-4">
+                               <div>
+                                   <label className="text-[9px] font-black uppercase text-slate-500 italic tracking-widest ml-1">Industry Niche</label>
+                                   <select value={huntParams.niche} onChange={e => setHuntParams({...huntParams, niche: e.target.value})} className="w-full bg-slate-50 dark:bg-slate-900 border border-white/5 rounded-xl p-3 text-[10px] font-black italic uppercase outline-none focus:border-orange-500 mt-1">
+                                       {TEMPLATES.map(t => <option key={t.id} value={t.niche}>{t.name}</option>)}
+                                   </select>
+                               </div>
+                               <div>
+                                   <label className="text-[9px] font-black uppercase text-slate-500 italic tracking-widest ml-1">Target Location</label>
+                                   <input value={huntParams.location} onChange={e => setHuntParams({...huntParams, location: e.target.value})} className="w-full bg-slate-50 dark:bg-slate-900 border border-white/5 rounded-xl p-3 text-[10px] font-black italic uppercase outline-none focus:border-orange-500 mt-1" placeholder="City, State" />
+                               </div>
+                               <button onClick={triggerHunt} disabled={isHunting} className="w-full py-4 bg-orange-600 hover:bg-orange-500 text-white rounded-2xl text-[11px] font-black uppercase italic shadow-xl shadow-orange-500/20 active:scale-95 transition-all flex items-center justify-center gap-3">
+                                   {isHunting ? <RefreshCw className="animate-spin" size={16}/> : <Search size={16}/>}
+                                   {isHunting ? 'Analyzing Grid...' : 'Find New Leads'}
+                               </button>
+                           </div>
+                      </div>
+                      <div className="md:col-span-8 bg-slate-100 dark:bg-slate-900/30 border border-dashed border-slate-300 dark:border-white/5 rounded-[40px] p-8 flex flex-col items-center justify-center text-center">
+                          {huntResult ? (
+                              <div className="animate-in fade-in zoom-in duration-500">
+                                  <div className="w-16 h-16 bg-green-500/10 text-green-500 rounded-full flex items-center justify-center mb-4 mx-auto"><CheckCircle size={32}/></div>
+                                  <h3 className="text-2xl font-black italic uppercase tracking-tighter">Scan Complete</h3>
+                                  <p className="text-[10px] text-slate-500 font-bold uppercase italic mt-2">Discovered {huntResult.length} new prospects matching parameters.</p>
+                                  <button onClick={() => setActiveTab('crm')} className="mt-6 text-orange-500 font-black italic uppercase text-[10px] tracking-widest hover:underline">View in Pipeline →</button>
+                              </div>
+                          ) : (
+                              <>
+                                  <Zap size={48} className="text-slate-300 dark:text-slate-800 mb-4" />
+                                  <h3 className="text-xl font-black italic uppercase tracking-tighter opacity-50">Awaiting Signal</h3>
+                                  <p className="text-[10px] text-slate-500 font-bold uppercase italic mt-2">Enter target parameters to begin discovery.</p>
+                              </>
+                          )}
+                      </div>
+                  </div>
+              </div>
           )}
 
           {activeTab === 'users' && isAdmin && (
               <div className="space-y-8 animate-in fade-in duration-300">
                   <header className="flex justify-between items-end">
                       <div>
-                          <h2 className="text-3xl font-black italic tracking-tighter uppercase leading-none">Staff <span className="text-orange-500">Operations</span></h2>
-                          <p className="text-slate-500 text-[10px] font-bold italic opacity-60 uppercase mt-1">Personnel Management & Role-Based Access.</p>
+                          <h2 className="text-3xl font-black italic tracking-tighter uppercase leading-none">User <span className="text-orange-500">Management</span></h2>
+                          <p className="text-slate-500 text-[10px] font-bold italic opacity-60 uppercase mt-1">Manage personnel access and roles.</p>
                       </div>
-                      <button onClick={() => { setTargetStaff(null); setStaffData({email:'', password:'', role:'staff'}); setIsStaffModalOpen(true); }} className="bg-orange-500 text-white px-6 py-2 rounded-xl text-[10px] font-black uppercase italic shadow-lg shadow-orange-500/20 active:scale-95 transition-all flex items-center gap-2"><PlusCircle size={14}/> Provision Staff</button>
+                      <button onClick={() => { setTargetStaff(null); setStaffData({email:'', password:'', role:'staff'}); setIsStaffModalOpen(true); }} className="bg-primary text-primary-foreground px-6 py-2 rounded-xl text-[10px] font-black uppercase italic shadow-lg shadow-primary/20 active:scale-95 transition-all flex items-center gap-2"><PlusCircle size={14}/> Provision User</button>
                   </header>
 
                   <div className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-white/5 rounded-3xl overflow-hidden shadow-xl">
@@ -341,7 +440,7 @@ export default function Dashboard() {
                                           <div className="text-[8px] text-slate-500 font-bold uppercase italic opacity-60">{u.id}</div>
                                       </td>
                                       <td className="px-6 py-4">
-                                          <span className={`px-2 py-1 rounded-md text-[8px] font-black uppercase italic border ${u.role === 'admin' ? 'bg-orange-500/10 text-orange-500 border-orange-500/20' : 'bg-slate-100 dark:bg-slate-900 text-slate-500 border-white/5'}`}>{u.role}</span>
+                                          <span className={`px-2 py-1 rounded-md text-[8px] font-black uppercase italic border ${u.role === 'admin' ? 'bg-primary/10 text-primary border-primary/20 font-bold' : 'bg-slate-100 dark:bg-slate-900 text-slate-500 border-white/5'}`}>{u.role}</span>
                                       </td>
                                       <td className="px-6 py-4 text-[10px] font-black italic text-slate-500 uppercase">{new Date(u.created_at).toLocaleDateString()}</td>
                                       <td className="px-6 py-4 text-right">
@@ -457,17 +556,17 @@ export default function Dashboard() {
           <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
               <div className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-white/10 w-full max-w-md rounded-[40px] p-8 shadow-2xl animate-in zoom-in-95 duration-200">
                   <div className="flex justify-between items-center mb-8">
-                     <h3 className="text-2xl font-black italic uppercase tracking-tighter">Initialize <span className="text-orange-500">Scout Protocol</span></h3>
+                     <h3 className="text-2xl font-black italic uppercase tracking-tighter">New <span className="text-primary">Lead Registration</span></h3>
                      <button onClick={() => setIsAddLeadModalOpen(false)} className="p-2 bg-slate-100 dark:bg-slate-900 rounded-xl text-slate-500"><X size={18}/></button>
                   </div>
                   <div className="space-y-4">
-                      <input className="w-full bg-slate-50 dark:bg-slate-900 border border-white/5 rounded-xl p-3 text-[11px] font-black italic uppercase" placeholder="Company Name" value={newLead.company_name} onChange={e => setNewLead({...newLead, company_name: e.target.value})} />
-                      <input className="w-full bg-slate-50 dark:bg-slate-900 border border-white/5 rounded-xl p-3 text-[11px] font-black italic uppercase" placeholder="Website Node" value={newLead.website_url} onChange={e => setNewLead({...newLead, website_url: e.target.value})} />
+                      <input className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-white/5 rounded-xl p-3 text-[11px] font-black italic uppercase" placeholder="Company Name" value={newLead.company_name} onChange={e => setNewLead({...newLead, company_name: e.target.value})} />
+                      <input className="w-full bg-slate-50 dark:bg-slate-900 border border-white/5 rounded-xl p-3 text-[11px] font-black italic uppercase" placeholder="Website URL" value={newLead.website_url} onChange={e => setNewLead({...newLead, website_url: e.target.value})} />
                       <button onClick={async () => {
                         const token = localStorage.getItem('cb_token');
                         await fetch(`${API_BASE}/crm/leads`, { method: 'POST', headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify(newLead) });
                         setIsAddLeadModalOpen(false); fetchData();
-                      }} className="w-full py-4 bg-orange-500 text-white rounded-2xl text-[11px] font-black uppercase italic shadow-xl shadow-orange-500/20 active:scale-95 transition-all">Launch Scout</button>
+                      }} className="w-full py-4 bg-primary text-primary-foreground rounded-2xl text-[11px] font-black uppercase italic shadow-xl shadow-primary/20 active:scale-95 transition-all">Register Lead</button>
                   </div>
               </div>
           </div>
@@ -489,9 +588,13 @@ function SideNavItem({ icon, label, active, onClick }: any) {
     );
 }
 
-function ThemeBtn({ active, onClick, icon }: any) {
+function ThemeBtn({ active, onClick, icon, label }: any) {
     return (
-        <button onClick={onClick} className={`flex-1 p-1.5 rounded-md flex items-center justify-center transition-all ${active ? 'bg-white dark:bg-slate-800 text-orange-500 shadow-sm border border-black/5' : 'text-slate-400 hover:text-white'}`}>
+        <button 
+            onClick={onClick} 
+            title={label}
+            className={`flex-1 p-1.5 rounded-md flex items-center justify-center transition-all ${active ? 'bg-primary text-primary-foreground shadow-sm shadow-primary/20 border border-primary/20' : 'text-slate-400 hover:bg-slate-500/10'}`}
+        >
             {icon}
         </button>
     );
@@ -500,7 +603,7 @@ function ThemeBtn({ active, onClick, icon }: any) {
 function ReportCard({ title, val, trend, icon }: any) {
     return (
         <div className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-white/5 p-8 rounded-[40px] shadow-xl relative overflow-hidden group hover:scale-[1.02] transition-all">
-            <div className="absolute top-0 right-0 p-8 opacity-5 text-orange-500 group-hover:scale-110 transition-transform">
+            <div className="absolute top-0 right-0 p-8 opacity-5 text-primary group-hover:scale-110 transition-transform">
                 {icon}
             </div>
             <div className="text-[10px] font-black uppercase text-slate-500 italic tracking-[0.2em] mb-4">{title}</div>
@@ -538,9 +641,9 @@ function KanbanCol({ title, leads, status, onDrop }: any) {
                         className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-white/10 p-4 rounded-xl shadow-md cursor-grab active:cursor-grabbing hover:border-orange-500/30 transition-all group"
                     >
                         <div className="flex justify-between items-center mb-1">
-                            <span className={`text-[8px] font-black uppercase px-2 py-0.5 rounded ${l.ai_score > 80 ? 'bg-red-500/10 text-red-500' : 'bg-orange-500/10 text-orange-500'}`}>{l.ai_score} RISK</span>
+                            <span className={`text-[8px] font-black uppercase px-2 py-0.5 rounded ${l.ai_score > 80 ? 'bg-red-500/10 text-red-500 font-bold' : 'bg-primary/10 text-primary font-bold'}`}>{l.ai_score} RISK</span>
                             <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-all">
-                                <Link to={`/lead/${l.id}`} className="text-slate-400 hover:text-orange-500"><ChevronRight size={14}/></Link>
+                                <Link to={`/lead/${l.id}`} className="text-slate-400 hover:text-primary"><ChevronRight size={14}/></Link>
                             </div>
                         </div>
                         <h5 className="text-[11px] font-black italic uppercase tracking-tight truncate">{l.company_name}</h5>

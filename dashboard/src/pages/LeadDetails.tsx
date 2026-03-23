@@ -16,6 +16,7 @@ const API_BASE = 'https://cloudbase-crm.curtislamasters.workers.dev/api';
 export default function LeadDetails() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const theme = localStorage.getItem('theme') || 'dark';
   const [lead, setLead] = useState<any>(null);
   const [dossier, setDossier] = useState<any>(null);
   const [activities, setActivities] = useState<any[]>([]);
@@ -158,37 +159,37 @@ export default function LeadDetails() {
   );
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 font-sans selection:bg-orange-500/30 overflow-x-hidden text-foreground">
+    <div className={`min-h-screen bg-background font-sans selection:bg-primary/30 overflow-x-hidden text-foreground ${theme}`}>
       
       <div className="max-w-6xl mx-auto p-8 lg:p-12 space-y-12 pb-32">
         
         {/* Header */}
         <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-8">
           <div className="space-y-4 flex-1">
-             <Link to="/" className="inline-flex items-center gap-2 text-slate-500 hover:text-orange-500 transition-all font-black text-[10px] uppercase tracking-widest italic">
-                <ArrowLeft size={12}/> Command Rail
+             <Link to="/" className="inline-flex items-center gap-2 text-slate-500 hover:text-primary transition-all font-black text-[10px] uppercase tracking-widest italic">
+                <ArrowLeft size={12}/> Back to Leads
              </Link>
              <div className="space-y-2">
                 <div className="flex items-center gap-3">
-                   <span className="bg-orange-500/10 p-2 border border-orange-500/20 rounded-xl text-orange-500">
-                      <Rocket size={18} />
+                   <span className="bg-primary/10 p-2 border border-primary/20 rounded-xl text-primary">
+                      <Briefcase size={18} />
                    </span>
-                   <span className="text-slate-500 text-[9px] font-black uppercase tracking-[0.3em] italic">Mission ID: {lead.id.split('-')[0].toUpperCase()}</span>
+                   <span className="text-slate-500 text-[9px] font-black uppercase tracking-[0.3em] italic">Lead Reference: {lead.id.split('-')[0].toUpperCase()}</span>
                 </div>
                 <h1 className="text-4xl md:text-5xl font-black italic tracking-tighter uppercase leading-none">{lead.company_name}</h1>
                 <div className="flex items-center gap-4">
                    <div className={`px-4 py-1.5 rounded-lg text-[9px] font-black uppercase italic border border-white/5 ${lead.status === 'Won' ? 'bg-green-500 text-white' : 'bg-slate-200 dark:bg-slate-900 text-slate-500'}`}>
                       {lead.status === 'Won' ? 'SUCCESS' : lead.status}
                    </div>
-                   <p className="text-slate-500 text-sm font-bold italic opacity-60 truncate max-w-xs">{lead.website_url}</p>
+                   <p className="text-slate-500 text-sm font-bold italic opacity-60 truncate max-width-xs">{lead.website_url}</p>
                 </div>
              </div>
           </div>
 
           <div className="flex items-center gap-6 bg-white dark:bg-slate-900/50 p-6 rounded-3xl border border-slate-200 dark:border-white/5 shadow-xl">
              <div className="text-center">
-                <div className="text-[8px] text-slate-500 uppercase font-black tracking-widest mb-1 italic">Node Risk</div>
-                <div className={`text-5xl font-black italic tracking-tighter leading-none ${lead.ai_score > 80 ? 'text-red-500' : 'text-orange-500'}`}>{lead.ai_score}</div>
+                <div className="text-[8px] text-slate-500 uppercase font-black tracking-widest mb-1 italic">Risk Score</div>
+                <div className={`text-5xl font-black italic tracking-tighter leading-none ${lead.ai_score > 80 ? 'text-red-500' : 'text-primary'}`}>{lead.ai_score}</div>
              </div>
              <div className="w-px h-12 bg-slate-200 dark:bg-white/5"></div>
              <div className="text-center">
@@ -203,9 +204,9 @@ export default function LeadDetails() {
                         const { url } = await res.json();
                         if (url) window.location.href = url;
                     }}
-                    className="ml-4 bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-xl text-[10px] font-black uppercase italic shadow-lg shadow-orange-500/20 transition-all active:scale-95"
+                    className="ml-4 bg-primary hover:bg-primary/90 text-primary-foreground px-4 py-2 rounded-xl text-[10px] font-black uppercase italic shadow-lg shadow-primary/20 transition-all active:scale-95"
                 >
-                    Deploy Commercial Agreement
+                    Generate Agreement
                 </button>
              )}
           </div>
@@ -228,15 +229,15 @@ export default function LeadDetails() {
                 <div className="flex justify-between items-center relative z-10">
                    <div className="space-y-1">
                       <h2 className="text-2xl font-black italic tracking-tighter uppercase flex items-center gap-3 leading-none">
-                         <Activity className="text-orange-500" size={28} /> Audit <span className="text-orange-500">Pulse</span>
+                         <Activity className="text-primary" size={28} /> Infrastructure <span className="text-primary">Monitor</span>
                       </h2>
-                      <p className="text-[8px] text-slate-500 font-bold uppercase tracking-widest italic">Phase IX: Continuous Infrastructure Verification</p>
+                      <p className="text-[8px] text-slate-500 font-bold uppercase tracking-widest italic">Continuous Infrastructure Verification</p>
                    </div>
                    <div className="flex items-center gap-4">
                        <button onClick={toggleMonitoring} className={`flex items-center gap-2 px-4 py-2 rounded-xl text-[9px] font-black uppercase italic transition-all ${lead.auto_monitoring_enabled ? 'bg-green-500/10 text-green-500 border border-green-500/20' : 'bg-slate-100 dark:bg-slate-900 text-slate-500 border border-white/5'}`}>
-                           <Power size={14}/> {lead.auto_monitoring_enabled ? 'Monitoring Active' : 'Start Monitoring'}
+                           <Power size={14}/> {lead.auto_monitoring_enabled ? 'Active' : 'Enable Monitoring'}
                        </button>
-                       <button disabled={isRescanning} onClick={triggerRescan} className="bg-orange-500 text-white p-2.5 rounded-xl shadow-lg shadow-orange-500/20 active:scale-95 transition-all">
+                       <button disabled={isRescanning} onClick={triggerRescan} className="bg-primary text-primary-foreground p-2.5 rounded-xl shadow-lg shadow-primary/20 active:scale-95 transition-all">
                            <RefreshCw size={16} className={isRescanning ? 'animate-spin' : ''} />
                        </button>
                    </div>
@@ -345,7 +346,7 @@ export default function LeadDetails() {
              {/* Mission Items */}
              <section className="bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-white/5 p-6 rounded-3xl space-y-6 shadow-xl">
                 <h2 className="text-xl font-black italic tracking-tighter uppercase flex items-center gap-3 leading-none">
-                   <CheckSquare className="text-orange-500" size={24} /> Mission <span className="text-orange-500">Items</span>
+                   <CheckSquare className="text-primary" size={24} /> Task <span className="text-primary">List</span>
                 </h2>
                 <form onSubmit={handleCreateTask} className="flex gap-2">
                    <input value={taskTitle} onChange={e => setTaskTitle(e.target.value)} className="flex-1 bg-slate-50 dark:bg-slate-950 border border-white/5 rounded-xl p-2.5 text-[10px] font-black italic uppercase outline-none focus:border-orange-500" placeholder="New Task..." />
