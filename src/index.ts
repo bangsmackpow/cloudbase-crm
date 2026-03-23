@@ -17,7 +17,13 @@ import { processNicheDiscovery } from './api/hunter/hunter_engine';
 const app = new Hono<{ Bindings: any }>();
 
 // Global Middleware
-app.use('*', cors());
+app.use('*', cors({
+  origin: '*',
+  allowHeaders: ['Content-Type', 'Authorization'],
+  allowMethods: ['POST', 'GET', 'OPTIONS', 'PATCH', 'DELETE', 'PUT'],
+  exposeHeaders: ['Content-Length'],
+  maxAge: 600,
+}));
 
 // 1. Health Check
 app.get('/', (c) => c.text('CloudBase API is Online in Creston!'));

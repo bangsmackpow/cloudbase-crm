@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { 
   Users, Search, Target, Zap, RefreshCw, 
@@ -31,32 +31,47 @@ export default function Dashboard() {
   const [viewMode, setViewMode] = useState('list'); 
   
   const [collections, setCollections] = useState<any[]>([]);
-  const [selectedCollection, setSelectedCollection] = useState<any>(null);
   const [objects, setObjects] = useState<any[]>([]);
   const [dashboardUsers, setDashboardUsers] = useState<any[]>([]);
   
   const navigate = useNavigate();
+  const logoutRef = useRef(false);
 
   // Modals
   const [isAddLeadModalOpen, setIsAddLeadModalOpen] = useState(false);
   const [newLead, setNewLead] = useState({ company_name: '', website_url: '', status: 'New' });
 
   const logout = useCallback(() => {
+    if (logoutRef.current) return;
+    logoutRef.current = true;
+    console.log('[AUTH] Logging out...');
     localStorage.removeItem('cb_token');
     navigate('/login');
   }, [navigate]);
+
+  // Decode JWT manually (Fixes atob issues with URL-safe base64)
+  const decodeJWT = (token: string) => {
+      try {
+          const base64Url = token.split('.')[1];
+          const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+          const jsonPayload = decodeURIComponent(atob(base64).split('').map(function(c) {
+              return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+          }).join(''));
+          return JSON.parse(jsonPayload);
+      } catch (e) {
+          return null;
+      }
+  };
 
   // Token Decoding & Initialization
   useEffect(() => {
     const token = localStorage.getItem('cb_token');
     if (token) {
-        try {
-            const parts = token.split('.');
-            if (parts.length < 2) throw new Error();
-            const payload = JSON.parse(atob(parts[1]));
+        const payload = decodeJWT(token);
+        if (payload) {
             setUser(payload);
-        } catch (e) { 
-            console.error('Invalid token structure');
+        } else {
+            console.error('Invalid token payload');
             logout();
         }
     } else {
@@ -81,18 +96,26 @@ export default function Dashboard() {
     if (!token) return;
     const headers = { 'Authorization': `Bearer ${token}` };
     try {
-      const [lRes, tRes, sRes] = await Promise.all([
+      const results = await Promise.all([
         fetch(`${API_BASE}/leads`, { headers }),
         fetch(`${API_BASE}/crm/tasks`, { headers }),
         fetch(`${API_BASE}/crm/stats`, { headers })
       ]);
       
-      if (lRes.status === 401) logout();
+      const unauth = results.find(r => r.status === 401);
+      if (unauth) {
+          console.warn('[AUTH] Forbidden/Unauthorized response. Triggering logout.');
+          logout();
+          return;
+      }
       
+      const [lRes, tRes, sRes] = results;
       if (lRes.ok) setLeads(await lRes.json());
       if (tRes.ok) setTasks(await tRes.json());
       if (sRes.ok) setCrmStats(await sRes.json());
-    } catch (err) { console.error('Fetch Error', err); }
+    } catch (err) { 
+        console.error('Fetch Error', err); 
+    }
   }, [logout]);
 
   const updateLeadStatus = async (id: string, newStatus: string) => {
@@ -151,9 +174,9 @@ export default function Dashboard() {
   }, []);
 
   useEffect(() => {
-    fetchData();
     const token = localStorage.getItem('cb_token');
     if (token) {
+      fetchData();
       const sse = new EventSource(`${API_BASE}/realtime/leads?token=${token}`);
       sse.onopen = () => setRealtimeStatus('connected');
       sse.onmessage = () => fetchData();
@@ -163,7 +186,9 @@ export default function Dashboard() {
   }, [fetchData]);
 
   useEffect(() => {
-      fetchBaaSData(activeTab);
+      if (activeTab !== 'crm' && activeTab !== 'email' && activeTab !== 'reports' && activeTab !== 'contacts') {
+          fetchBaaSData(activeTab);
+      }
   }, [activeTab, fetchBaaSData]);
 
   const triggerHunt = async () => {
@@ -178,7 +203,6 @@ export default function Dashboard() {
         });
         
         if (res.status === 401) {
-            setHuntResult({ error: "Your session has expired. Please log in again." });
             logout();
             return;
         }
@@ -238,7 +262,7 @@ export default function Dashboard() {
             </div>
             <div className="p-3 rounded-xl flex flex-col gap-2 bg-slate-200 dark:bg-slate-900/40 border border-white/5">
                <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-lg bg-orange-600 flex items-center justify-center text-white font-black text-[10px] italic">{user?.email?.slice(0,1).toUpperCase()}</div>
+                  <div className="w-8 h-8 rounded-lg bg-orange-600 flex items-center justify-center text-white font-black text-[10px] italic">{user?.email?.slice(0,1).toUpperCase() || 'U'}</div>
                   <div className="flex flex-col flex-1 overflow-hidden">
                      <div className="text-[10px] font-black italic uppercase tracking-tighter truncate">{user?.email?.split('@')[0]}</div>
                      <div className="text-[8px] text-orange-500 font-bold uppercase leading-none">{user?.role || 'Staff'}</div>
@@ -380,33 +404,6 @@ export default function Dashboard() {
                       <ReportCard title="Infrastructure Scouted" val={leads.length} trend="Total Nodes" icon={<Search size={32}/>} />
                       <ReportCard title="Grid Conversion" val={`${((crmStats.won_count / (leads.length || 1)) * 100).toFixed(1)}%`} trend="Win Rate" icon={<DollarSign size={32}/>} />
                   </div>
-                  <div className="grid grid-cols-2 gap-8 mt-12">
-                      <div className="bg-slate-100 dark:bg-slate-950 p-10 rounded-[2.5rem] border border-slate-200 dark:border-white/5 min-h-[400px]">
-                         <h4 className="text-xs font-black uppercase italic text-slate-500 mb-10 decoration-orange-500/20 underline underline-offset-8">Node Distribution Analytics</h4>
-                         <div className="space-y-6">
-                            {[90, 75, 40, 20].map((h, i) => (
-                                <div key={i} className="flex flex-col gap-2">
-                                    <div className="flex justify-between items-center text-[9px] font-black uppercase italic text-slate-600">
-                                        <span>Tier {i+1} Risk Matrix</span>
-                                        <span>{h}%</span>
-                                    </div>
-                                    <div className="flex-1 h-4 bg-white dark:bg-slate-900 border border-white/5 rounded-full overflow-hidden">
-                                        <div className="h-full bg-orange-500 transition-all duration-1000 shadow-[0_0_15px_rgba(249,115,22,0.4)]" style={{ width: `${h}%` }}></div>
-                                    </div>
-                                </div>
-                            ))}
-                         </div>
-                      </div>
-                      <div className="bg-orange-500 p-10 rounded-[2.5rem] flex flex-col justify-between text-white relative overflow-hidden group shadow-2xl shadow-orange-500/20 active:scale-[0.98] transition-all cursor-pointer">
-                         <Globe className="absolute -bottom-10 -right-10 opacity-10 group-hover:scale-150 transition-all duration-1000" size={300} />
-                         <div className="relative z-10">
-                            <h4 className="text-[10px] font-black uppercase italic tracking-widest opacity-80 decoration-white/20 underline underline-offset-8 mb-6">Executive brief v4.2</h4>
-                            <p className="text-4xl font-black italic tracking-tighter leading-[0.9]">"Your grid capacity in {huntParams.location} has exceeded safe technical debt thresholds."</p>
-                            <p className="mt-8 text-xs font-bold leading-relaxed opacity-80 uppercase italic">Recommendation: Deploy high-density audit workers to resolve SSL and latency gaps in the top 4 nodes immediately.</p>
-                         </div>
-                         <button className="bg-white text-orange-500 px-10 py-4 rounded-2xl font-black italic uppercase text-xs self-start mt-8 shadow-xl hover:bg-slate-50 transition-colors">Export IQ Report</button>
-                      </div>
-                  </div>
               </div>
           )}
 
@@ -434,7 +431,7 @@ export default function Dashboard() {
                                 <tr key={u.id} className="group hover:bg-slate-50 dark:hover:bg-white/5 transition-all">
                                     <td className="py-7">
                                         <div className="flex items-center gap-4">
-                                            <div className="w-12 h-12 rounded-2xl bg-slate-100 dark:bg-slate-900 flex items-center justify-center text-orange-500 font-black italic border border-white/5">{u.email?.slice(0,1).toUpperCase()}</div>
+                                            <div className="w-12 h-12 rounded-2xl bg-slate-100 dark:bg-slate-900 flex items-center justify-center text-orange-500 font-black italic border border-white/5">{u.email?.slice(0,1).toUpperCase() || 'U'}</div>
                                             <div>
                                                 <div className="text-base font-black italic uppercase tracking-tighter text-foreground">{u.email}</div>
                                                 <div className="text-[9px] text-slate-500 font-bold uppercase tracking-[0.3em]">{u.id.slice(0,12)}</div>
@@ -553,6 +550,81 @@ function ThemeBtn({ active, onClick, icon }: any) {
         <button onClick={onClick} className={`flex-1 p-2 rounded-lg flex items-center justify-center transition-all ${active ? 'bg-white dark:bg-slate-800 text-orange-500 shadow-md border border-white/5' : 'text-slate-400 hover:text-white'}`}>
             {icon}
         </button>
+    );
+}
+
+function LeadCard({ lead }: { lead: any }) {
+    return (
+        <Link to={`/lead/${lead.id}`} className="group bg-white dark:bg-slate-950 border border-slate-100 dark:border-white/10 rounded-[2.5rem] p-7 hover:border-orange-500/40 transition-all h-64 flex flex-col justify-between shadow-xl active:scale-95 duration-200 relative overflow-hidden">
+            <div className="absolute -top-10 -right-10 opacity-5 group-hover:scale-150 transition-all duration-700">
+               <ShieldCheck size={200} className="text-orange-500" />
+            </div>
+            <div className="flex justify-between items-start relative z-10">
+               <div className={`text-5xl font-black italic tracking-tighter ${lead.ai_score > 80 ? 'text-red-500' : 'text-orange-500'}`}>{lead.ai_score}</div>
+               <div className="w-10 h-10 bg-slate-50 dark:bg-slate-900 rounded-lg flex items-center justify-center text-orange-500 border border-slate-200 dark:border-white/5 group-hover:bg-orange-500 group-hover:text-white transition-all"><Target size={20}/></div>
+            </div>
+            <div className="relative z-10">
+               <h4 className="text-2xl font-black italic uppercase tracking-tighter leading-tight line-clamp-1">{lead.company_name}</h4>
+               <p className="text-slate-500 text-[10px] font-bold italic opacity-60 uppercase mt-1 tracking-wider">{lead.website_url?.replace('https://', '')}</p>
+            </div>
+            <div className="flex justify-between items-center border-t border-slate-100 dark:border-white/5 pt-5 relative z-10">
+               <span className="px-4 py-1.5 bg-slate-100 dark:bg-slate-900 rounded-full text-[9px] font-black uppercase text-slate-500 border border-white/5">{lead.status || 'New'}</span>
+               <ChevronRight size={22} className="text-orange-500 group-hover:translate-x-1 transition-transform" />
+            </div>
+        </Link>
+    );
+}
+
+function KanbanCol({ title, leads, status, onDrop }: any) {
+    const handleDragOver = (e: any) => e.preventDefault();
+    const handleDrop = (e: any) => {
+        const id = e.dataTransfer.getData('leadId');
+        onDrop(id, status);
+    };
+
+    return (
+        <div 
+            onDragOver={handleDragOver} 
+            onDrop={handleDrop}
+            className="bg-slate-100/50 dark:bg-slate-950/40 border-2 border-white/5 rounded-[3rem] p-6 min-h-[500px] flex flex-col space-y-4"
+        >
+            <div className="flex justify-between items-center mb-6 pl-2">
+                <h4 className="text-[11px] font-black uppercase italic tracking-[0.3em] text-orange-500">{title}</h4>
+                <div className="w-6 h-6 rounded-lg bg-white dark:bg-slate-900 text-[10px] font-black flex items-center justify-center border border-white/5">{leads.length}</div>
+            </div>
+            <div className="space-y-4 flex-1">
+                {leads.map((l: any) => (
+                    <div 
+                        key={l.id} 
+                        draggable 
+                        onDragStart={(e) => e.dataTransfer.setData('leadId', l.id)}
+                        className="bg-white dark:bg-slate-950 border border-slate-100 dark:border-white/10 p-6 rounded-2xl shadow-xl cursor-grab active:cursor-grabbing hover:ring-2 hover:ring-orange-500/50 transition-all group"
+                    >
+                        <div className="flex justify-between items-center mb-4">
+                            <span className={`text-2xl font-black italic tracking-tighter ${l.ai_score > 80 ? 'text-red-500' : 'text-orange-500'}`}>{l.ai_score}</span>
+                            <Target size={14} className="opacity-20" />
+                        </div>
+                        <h5 className="text-[12px] font-black italic uppercase leading-none text-foreground mb-3">{l.company_name}</h5>
+                        <div className="pt-4 border-t border-slate-50 dark:border-white/5 flex justify-between items-center">
+                            <Link to={`/lead/${l.id}`} className="text-[9px] font-black text-slate-500 uppercase italic hover:text-orange-500 flex items-center gap-1">VIEW NODE <ChevronRight size={10}/></Link>
+                        </div>
+                    </div>
+                ))}
+            </div>
+        </div>
+    );
+}
+
+function ReportCard({ title, val, trend, icon }: any) {
+    return (
+        <div className="bg-white dark:bg-slate-950 border border-slate-100 dark:border-white/5 p-10 rounded-[3rem] shadow-2xl relative overflow-hidden group">
+            <div className="absolute top-0 right-0 p-8 opacity-5 group-hover:scale-125 transition-all text-orange-500">
+                {icon}
+            </div>
+            <h4 className="text-[10px] font-black uppercase italic tracking-widest text-slate-400 mb-6">{title}</h4>
+            <div className="text-5xl font-black italic tracking-tighter text-foreground mb-4">{val}</div>
+            <div className="text-[10px] font-black uppercase italic text-orange-500 bg-orange-500/10 px-3 py-1.5 rounded-full inline-block border border-orange-500/20">{trend}</div>
+        </div>
     );
 }
 
