@@ -205,7 +205,7 @@ export default function Dashboard() {
     finally { setIsHunting(false); }
   };
 
-  const isAdmin = user?.role === 'admin';
+  const isAdmin = user?.role?.toLowerCase() === 'admin';
 
   return (
     <div className="min-h-screen bg-background flex font-sans selection:bg-orange-500/30 overflow-hidden text-foreground">

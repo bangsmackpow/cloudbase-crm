@@ -10,7 +10,7 @@ const auth = new Hono<{
 // --- ADMIN: LIST ALL USERS ---
 auth.get('/users', async (c) => {
   const user = c.get('jwtPayload');
-  if (user.role !== 'admin') return c.json({ error: "Forbidden" }, 403);
+  if (user.role?.toLowerCase() !== 'admin') return c.json({ error: "Forbidden" }, 403);
   
   const { results } = await c.env.DB.prepare(
     "SELECT id, email, role, created_at FROM _users WHERE tenant_id = ? ORDER BY created_at DESC"
@@ -22,7 +22,7 @@ auth.get('/users', async (c) => {
 // --- ADMIN: CREATE NEW USER ---
 auth.post('/users', async (c) => {
     const user = c.get('jwtPayload');
-    if (user.role !== 'admin') return c.json({ error: "Forbidden" }, 403);
+    if (user.role?.toLowerCase() !== 'admin') return c.json({ error: "Forbidden" }, 403);
     
     const { email, password, role } = await c.req.json();
     const id = crypto.randomUUID();
@@ -38,7 +38,7 @@ auth.post('/users', async (c) => {
 // --- ADMIN: UPDATE ANY USER (EMAIL/PASSWORD/ROLE) ---
 auth.patch('/users/:id', async (c) => {
     const admin = c.get('jwtPayload');
-    if (admin.role !== 'admin') return c.json({ error: "Forbidden" }, 403);
+    if (admin.role?.toLowerCase() !== 'admin') return c.json({ error: "Forbidden" }, 403);
     const targetId = c.req.param('id');
     const { email, password, role } = await c.req.json();
     
@@ -62,7 +62,7 @@ auth.patch('/users/:id', async (c) => {
 // --- ADMIN: DELETE USER ---
 auth.delete('/users/:id', async (c) => {
     const admin = c.get('jwtPayload');
-    if (admin.role !== 'admin') return c.json({ error: "Forbidden" }, 403);
+    if (admin.role?.toLowerCase() !== 'admin') return c.json({ error: "Forbidden" }, 403);
     const targetId = c.req.param('id');
     
     await c.env.DB.prepare("DELETE FROM _users WHERE id = ? AND tenant_id = ?").bind(targetId, admin.tenant_id).run();
