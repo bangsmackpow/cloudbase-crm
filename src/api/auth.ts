@@ -2,7 +2,21 @@ import { Hono } from 'hono';
 import { sign } from 'hono/jwt';
 import { verifyPassword } from '../auth/crypto';
 
-const auth = new Hono<{ Bindings: any }>();
+const auth = new Hono<{ 
+  Bindings: any, 
+  Variables: { jwtPayload: any } 
+}>();
+
+auth.get('/users', async (c) => {
+  const user = c.get('jwtPayload');
+  if (user.role !== 'admin') return c.json({ error: "Forbidden" }, 403);
+  
+  const { results } = await c.env.DB.prepare(
+    "SELECT id, email, role, created_at FROM _users WHERE tenant_id = ? ORDER BY created_at DESC"
+  ).bind(user.tenant_id).all();
+  
+  return c.json(results);
+});
 
 auth.post('/login', async (c) => {
   const { email, password } = await c.req.json();

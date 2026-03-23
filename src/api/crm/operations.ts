@@ -25,6 +25,18 @@ crm.get('/stats', async (c) => {
 });
 
 // --- CONVERT TO CUSTOMER ---
+crm.post('/leads', async (c) => {
+  const user = c.get('jwtPayload');
+  const { company_name, website_url, status } = await c.req.json();
+  const id = crypto.randomUUID();
+
+  await c.env.DB.prepare(
+    "INSERT INTO leads (id, tenant_id, company_name, website_url, status, ai_score) VALUES (?, ?, ?, ?, ?, ?)"
+  ).bind(id, user.tenant_id, company_name, website_url, status || 'New', 10).run();
+
+  return c.json({ success: true, id });
+});
+
 crm.post('/convert/:id', async (c) => {
   const id = c.req.param('id');
   const user = c.get('jwtPayload');
