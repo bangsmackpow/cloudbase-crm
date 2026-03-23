@@ -387,27 +387,27 @@ export default function Dashboard() {
 
                   <div className="space-y-6">
                       <div className="space-y-4">
-                          <label className="text-[9px] font-black uppercase text-slate-500 italic tracking-widest pl-1">Reset Access Key (Password)</label>
+                          <label className="text-[9px] font-black uppercase text-slate-500 italic tracking-widest pl-1">Change Password</label>
                           <div className="space-y-2">
                              <div className="relative">
                                 <Lock className="absolute left-3 top-2.5 text-slate-500" size={14}/>
-                                <input type="password" placeholder="Original Key" value={settingsData.oldPassword} onChange={e => setSettingsData({...settingsData, oldPassword: e.target.value})} className="w-full bg-slate-50 dark:bg-slate-900 border border-white/5 rounded-xl p-2.5 pl-10 text-[10px] font-black italic uppercase" />
+                                <input type="password" placeholder="Current Password" value={settingsData.oldPassword} onChange={e => setSettingsData({...settingsData, oldPassword: e.target.value})} className="w-full bg-slate-50 dark:bg-slate-900 border border-white/5 rounded-xl p-2.5 pl-10 text-[10px] font-black italic uppercase" />
                              </div>
                              <div className="relative">
                                 <Key className="absolute left-3 top-2.5 text-orange-500" size={14}/>
-                                <input type="password" placeholder="New Production Key" value={settingsData.newPassword} onChange={e => setSettingsData({...settingsData, newPassword: e.target.value})} className="w-full bg-slate-50 dark:bg-slate-900 border border-white/5 rounded-xl p-2.5 pl-10 text-[10px] font-black italic uppercase border-orange-500/20" />
+                                <input type="password" placeholder="New Password" value={settingsData.newPassword} onChange={e => setSettingsData({...settingsData, newPassword: e.target.value})} className="w-full bg-slate-50 dark:bg-slate-900 border border-white/5 rounded-xl p-2.5 pl-10 text-[10px] font-black italic uppercase border-orange-500/20" />
                              </div>
-                             <button onClick={() => handleSelfUpdate('password')} className="w-full py-2.5 bg-orange-600 hover:bg-orange-500 text-white rounded-xl text-[10px] font-black uppercase italic shadow-lg shadow-orange-500/20 transition-all active:scale-95">Update Security Node</button>
+                             <button onClick={() => handleSelfUpdate('password')} className="w-full py-2.5 bg-orange-600 hover:bg-orange-500 text-white rounded-xl text-[10px] font-black uppercase italic shadow-lg shadow-orange-500/20 transition-all active:scale-95">Update Password</button>
                           </div>
                       </div>
 
                       <div className="pt-6 border-t border-white/5 space-y-4">
-                        <label className="text-[9px] font-black uppercase text-slate-500 italic tracking-widest pl-1">Login Identity (Email)</label>
+                        <label className="text-[9px] font-black uppercase text-slate-500 italic tracking-widest pl-1">Email Address</label>
                         <div className="relative">
                             <MailIcon className="absolute left-3 top-2.5 text-blue-500" size={14}/>
-                            <input type="email" placeholder="New Login Email" value={settingsData.newEmail} onChange={e => setSettingsData({...settingsData, newEmail: e.target.value})} className="w-full bg-slate-50 dark:bg-slate-900 border border-white/5 rounded-xl p-2.5 pl-10 text-[10px] font-black italic uppercase border-blue-500/20" />
+                            <input type="email" placeholder="New Email Address" value={settingsData.newEmail} onChange={e => setSettingsData({...settingsData, newEmail: e.target.value})} className="w-full bg-slate-50 dark:bg-slate-900 border border-white/5 rounded-xl p-2.5 pl-10 text-[10px] font-black italic uppercase border-blue-500/20" />
                         </div>
-                        <button onClick={() => handleSelfUpdate('email')} className="w-full py-2.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-[10px] font-black uppercase italic shadow-lg shadow-blue-500/20 transition-all active:scale-95">Update Identity Label</button>
+                        <button onClick={() => handleSelfUpdate('email')} className="w-full py-2.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-[10px] font-black uppercase italic shadow-lg shadow-blue-500/20 transition-all active:scale-95">Update Email</button>
                       </div>
                   </div>
               </div>
@@ -420,18 +420,18 @@ export default function Dashboard() {
                   <div className="flex justify-between items-center">
                     <div>
                         <h3 className="text-2xl font-black italic uppercase tracking-tighter leading-none">{targetStaff ? 'Modify' : 'Provision'} <span className="text-orange-500">Staff</span></h3>
-                        <p className="text-[9px] font-bold text-slate-500 uppercase italic mt-1">Personnel Authorization Node Management.</p>
+                        <p className="text-[9px] font-bold text-slate-500 uppercase italic mt-1">Personnel Account Management.</p>
                     </div>
                     <button type="button" onClick={() => setIsStaffModalOpen(false)} className="p-2 bg-slate-100 dark:bg-slate-900 rounded-xl text-slate-500"><X size={18}/></button>
                   </div>
 
                   <div className="space-y-4">
                       <div className="space-y-1.5">
-                        <span className="text-[8px] font-black uppercase italic text-slate-500 tracking-widest ml-1">Identity Login</span>
+                        <span className="text-[8px] font-black uppercase italic text-slate-500 tracking-widest ml-1">Email Address</span>
                         <input type="email" required value={staffData.email} onChange={e => setStaffData({...staffData, email:e.target.value})} className="w-full bg-slate-50 dark:bg-slate-900 border border-white/5 rounded-xl p-3 text-[10px] font-black italic uppercase outline-none focus:border-orange-500" placeholder="STAFF EMAIL" />
                       </div>
                       <div className="space-y-1.5">
-                        <span className="text-[8px] font-black uppercase italic text-slate-500 tracking-widest ml-1">{targetStaff ? 'Reset Production Key (Optional)' : 'Initialize Secret Key'}</span>
+                        <span className="text-[8px] font-black uppercase italic text-slate-500 tracking-widest ml-1">{targetStaff ? 'Reset Password (Optional)' : 'Password'}</span>
                         <input type="password" required={!targetStaff} value={staffData.password} onChange={e => setStaffData({...staffData, password:e.target.value})} className="w-full bg-slate-50 dark:bg-slate-900 border border-white/5 rounded-xl p-3 text-[10px] font-black italic uppercase outline-none focus:border-orange-500" placeholder="PASSWORD" />
                       </div>
                       <div className="space-y-1.5">
