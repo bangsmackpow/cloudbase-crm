@@ -39,7 +39,8 @@ export default function LeadDetails() {
       ]);
       const leads = await leadsRes.json();
       setLead(leads.find((l: any) => l.id === id));
-      setDossier((await dossierRes.json())?.dossier);
+      const doss = await dossierRes.json();
+      setDossier(doss?.dossier);
       setActivities(await activityRes.json());
       setContacts(await contactRes.json());
       setTasks(await taskRes.json());
@@ -173,12 +174,9 @@ export default function LeadDetails() {
           </div>
         </header>
 
-        {/* Intelligence Matrix */}
         <div className="grid grid-cols-1 xl:grid-cols-12 gap-16">
           
           <div className="xl:col-span-8 space-y-16">
-             
-             {/* Strategy Brief */}
              <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
                 <section className="bg-slate-900/10 border border-white/5 p-12 rounded-[3.5rem] space-y-12">
                    <h2 className="text-4xl font-black text-white italic tracking-tighter uppercase flex items-center gap-5">
@@ -202,12 +200,11 @@ export default function LeadDetails() {
                        <p className="text-white text-xl italic leading-[2.2] font-black tracking-tight underline decoration-orange-500/10 underline-offset-8">
                           "{dossier?.executiveSummary || 'Recalculating...'}"
                        </p>
-                       <Zap className="absolute -top-4 -right-4 text-orange-500 fill-orange-500/20 shadow-orange-500" size={40}/>
+                       <Zap className="absolute -top-4 -right-4 text-orange-500 fill-orange-500/20" size={40}/>
                    </div>
                 </section>
              </div>
 
-             {/* DECISION MAKERS (Phase 2) */}
              <section className="bg-slate-900/10 border border-white/5 p-16 rounded-[4.5rem] space-y-12">
                 <div className="flex justify-between items-center border-b border-white/5 pb-10">
                    <h2 className="text-4xl font-black text-white italic tracking-tighter uppercase flex items-center gap-5">
@@ -231,7 +228,7 @@ export default function LeadDetails() {
                    {contacts.map(c => (
                       <div key={c.id} className="bg-slate-950 border border-white/5 p-10 rounded-[3.5rem] relative group hover:border-blue-500/40 transition-all border-l-[12px] border-l-blue-500/20">
                          <div className="flex justify-between items-center mb-8">
-                            <div className="w-16 h-16 bg-blue-500/10 rounded-3xl flex items-center justify-center text-blue-500 font-black text-2xl italic leading-none shadow-2xl">{c.first_name[0]}</div>
+                            <div className="w-16 h-16 bg-blue-500/10 rounded-3xl flex items-center justify-center text-blue-500 font-black text-2xl italic leading-none">{c.first_name[0]}</div>
                             <Trash2 size={24} className="text-slate-800 hover:text-red-500 transition-all cursor-pointer"/>
                          </div>
                          <h3 className="text-3xl font-black text-white italic uppercase tracking-tighter leading-none mb-3">{c.first_name} {c.last_name}</h3>
@@ -245,7 +242,6 @@ export default function LeadDetails() {
                 </div>
              </section>
 
-             {/* TACTICAL PROGRESSION (Tasks & Logs) */}
              <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
                 <section className="bg-slate-900/10 border border-white/5 p-12 rounded-[4rem] space-y-12">
                    <h2 className="text-4xl font-black text-white italic tracking-tighter uppercase flex items-center gap-5">
@@ -258,7 +254,7 @@ export default function LeadDetails() {
                    <div className="space-y-6">
                       {tasks.map(t => (
                         <div key={t.id} onClick={() => toggleTask(t.id, t.completed)} className="flex gap-6 items-center group cursor-pointer p-6 bg-slate-950/40 rounded-[2rem] border border-white/5 hover:border-green-500/30 transition-all">
-                           <div className={`w-10 h-10 rounded-2xl flex items-center justify-center border border-white/5 transition-all ${t.completed ? 'bg-green-500 border-none shadow-2xl' : 'bg-slate-900 group-hover:bg-slate-800'}`}>
+                           <div className={`w-10 h-10 rounded-2xl flex items-center justify-center border border-white/5 transition-all ${t.completed ? 'bg-green-500 border-none' : 'bg-slate-900'}`}>
                               {t.completed && <CheckCircle size={20} className="text-white"/>}
                            </div>
                            <span className={`text-sm font-black italic uppercase leading-tight flex-1 ${t.completed ? 'text-slate-700 line-through' : 'text-slate-300'}`}>{t.title}</span>
@@ -278,11 +274,11 @@ export default function LeadDetails() {
                    <div className="space-y-10 pt-10 relative border-l border-white/5 ml-4 pl-12">
                       {activities.map(a => (
                         <div key={a.id} className="relative group">
-                           <div className="absolute -left-[68px] top-0 w-12 h-12 bg-slate-950 border border-white/5 rounded-2xl flex items-center justify-center text-orange-500 shadow-2xl group-hover:scale-110 transition-transform">
-                              {a.type === 'Status Change' ? <TrendingUp size={22}/> : <MessageSquare size={22}/>}
+                           <div className="absolute -left-[68px] top-0 w-12 h-12 bg-slate-950 border border-white/5 rounded-2xl flex items-center justify-center text-orange-500 group-hover:scale-110 transition-transform">
+                              <MessageSquare size={22}/>
                            </div>
                            <p className="text-[10px] font-black text-slate-700 uppercase tracking-widest italic mb-2">{new Date(a.created_at).toLocaleString()}</p>
-                           <p className="text-slate-400 font-bold leading-relaxed italic text-sm underline decoration-white/5">{a.content}</p>
+                           <p className="text-slate-400 font-bold leading-relaxed italic text-sm">{a.content}</p>
                         </div>
                       ))}
                    </div>
@@ -297,19 +293,14 @@ export default function LeadDetails() {
                    <FinanceRow label="Deal Value" value={`$${lead.deal_value || 0}`} active />
                    <FinanceRow label="Stage" value={lead.status} />
                    <FinanceRow label="Customer ID" value={lead.stripe_customer_id || 'NOT CONVERTED'} />
-                   <FinanceRow label="Tenant Node" value="Built Networks" />
                 </div>
                 <div className="pt-10 flex flex-col gap-6 border-t border-white/5">
-                   <button className="w-full bg-slate-900 border border-white/5 text-white font-black py-6 rounded-[2.5rem] italic text-xs uppercase tracking-widest hover:bg-slate-800 transition-all flex items-center justify-center gap-4">
+                   <button className="w-full bg-slate-900 border border-white/5 text-white font-black py-6 rounded-[2.5rem] italic text-xs uppercase tracking-widest flex items-center justify-center gap-4">
                       <DollarSign size={20} className="text-green-500"/> VIEW FINANCIAL LEDGER
-                   </button>
-                   <button className="w-full bg-slate-900/40 border border-white/5 text-slate-600 font-black py-6 rounded-[2.5rem] italic text-xs uppercase tracking-widest cursor-not-allowed">
-                      EXPORT AUDIT PACKAGE
                    </button>
                 </div>
              </div>
           </aside>
-
         </div>
       </div>
     </div>
@@ -324,5 +315,3 @@ function FinanceRow({ label, value, active }: any) {
     </div>
   );
 }
-
-function Globe(props: any) { return <Rocket {...props} />; }
