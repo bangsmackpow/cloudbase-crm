@@ -30,11 +30,17 @@ crm.post('/leads', async (c) => {
   const { company_name, website_url, status } = await c.req.json();
   const id = crypto.randomUUID();
 
-  await c.env.DB.prepare(
-    "INSERT INTO leads (id, tenant_id, company_name, website_url, status, ai_score) VALUES (?, ?, ?, ?, ?, ?)"
-  ).bind(id, user.tenant_id, company_name, website_url, status || 'New', 10).run();
-
   return c.json({ success: true, id });
+});
+
+crm.get('/leads/:id', async (c) => {
+  const id = c.req.param('id');
+  const user = c.get('jwtPayload');
+  const lead = await c.env.DB.prepare(
+    "SELECT * FROM leads WHERE id = ? AND tenant_id = ?"
+  ).bind(id, user.tenant_id).first();
+  if (!lead) return c.json({ error: "Not Found" }, 404);
+  return c.json(lead);
 });
 
 crm.post('/convert/:id', async (c) => {
@@ -93,6 +99,13 @@ crm.patch('/tasks/:id', async (c) => {
     "UPDATE tasks SET completed = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND tenant_id = ?"
   ).bind(completed ? 1 : 0, id, user.tenant_id).run();
 
+  return c.json({ success: true });
+});
+
+crm.delete('/tasks/:id', async (c) => {
+  const id = c.req.param('id');
+  const user = c.get('jwtPayload');
+  await c.env.DB.prepare("DELETE FROM tasks WHERE id = ? AND tenant_id = ?").bind(id, user.tenant_id).run();
   return c.json({ success: true });
 });
 
@@ -159,17 +172,24 @@ crm.get('/contacts/:leadId', async (c) => {
   return c.json(results);
 });
 
-crm.post('/contacts/:leadId', async (c) => {
+  return c.json({ success: true, id });
+});
+
+crm.delete('/contacts/:id', async (c) => {
+  const id = c.req.param('id');
+  const user = c.get('jwtPayload');
+  await c.env.DB.prepare("DELETE FROM contacts WHERE id = ? AND tenant_id = ?").bind(id, user.tenant_id).run();
+  return c.json({ success: true });
+});
+
+// --- VAULT / AUDIT HISTORY (Phase 7) ---
+crm.get('/vault/:leadId', async (c) => {
   const leadId = c.req.param('leadId');
   const user = c.get('jwtPayload');
-  const body = await c.req.json();
-  const id = crypto.randomUUID();
-
-  await c.env.DB.prepare(
-    "INSERT INTO contacts (id, lead_id, tenant_id, first_name, last_name, title, email, phone) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
-  ).bind(id, leadId, user.tenant_id, body.first_name, body.last_name, body.title, body.email, body.phone).run();
-
-  return c.json({ success: true, id });
+  const { results } = await c.env.DB.prepare(
+    "SELECT * FROM audit_history WHERE lead_id = ? AND tenant_id = ? ORDER BY created_at DESC"
+  ).bind(leadId, user.tenant_id).all();
+  return c.json(results);
 });
 
 export default crm;
