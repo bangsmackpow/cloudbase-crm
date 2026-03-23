@@ -1,11 +1,17 @@
 import { Hono } from 'hono';
 import { sign } from 'hono/jwt';
 import { verifyPassword, hashPassword } from '../auth/crypto';
+import { authMiddleware } from '../auth/middleware';
 
 const auth = new Hono<{ 
   Bindings: any, 
   Variables: { jwtPayload: any } 
 }>();
+
+// 🔒 Middleware Guard for all management routes
+auth.use('/users/*', (c, next) => authMiddleware(c.env.JWT_SECRET)(c, next));
+auth.use('/users', (c, next) => authMiddleware(c.env.JWT_SECRET)(c, next));
+auth.use('/me/*', (c, next) => authMiddleware(c.env.JWT_SECRET)(c, next));
 
 // --- ADMIN: LIST ALL USERS ---
 auth.get('/users', async (c) => {

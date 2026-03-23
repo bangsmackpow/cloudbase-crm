@@ -157,6 +157,9 @@ export default function Dashboard() {
           setTargetStaff(null);
           setStaffData({ email: '', password: '', role: 'staff' });
           fetchBaaSData('users');
+      } else {
+          const err = await res.json();
+          alert(`Provisioning Failed: ${err.error || 'Check authorization'}`);
       }
   };
 
@@ -181,12 +184,11 @@ export default function Dashboard() {
           body: JSON.stringify(body)
       });
       if (res.ok) {
-          alert("Profile Updated Successfully");
-          if (type === 'email') logout();
-          else setIsSettingsModalOpen(false);
+          alert(`Auth Node Updated: Please logout and login again.`);
+          setIsSettingsModalOpen(false);
       } else {
           const err = await res.json();
-          alert(err.error || "Update failed");
+          alert(`Update Refused: ${err.error || 'System Rejection'}`);
       }
   };
 
