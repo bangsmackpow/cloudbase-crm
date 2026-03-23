@@ -99,7 +99,7 @@ export default function Dashboard() {
       if (leadRes.ok) setLeads(await leadRes.json());
       if (taskRes.ok) setTasks(await taskRes.json());
       if (statsRes.ok) setCrmStats(await statsRes.json());
-      if (notifyRes.ok) setNotifications(await notifyRes.json());
+      if (notifyRes.ok) setNotifications((await notifyRes.json()).map((n: any) => ({ ...n, time: new Date(n.created_at).toLocaleTimeString() })));
     } catch (err) { console.error(err); }
   }, [logout]);
 
@@ -236,7 +236,7 @@ export default function Dashboard() {
 
   const bulkUpdateStatus = async (status: string) => {
     const token = localStorage.getItem('cb_token');
-    await Promise.all(selectedLeads.map(id =>
+    await Promise.all(selectedLeads.map((id: string) =>
         fetch(`${API_BASE}/crm/leads/${id}`, {
             method: 'PATCH',
             headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
@@ -250,7 +250,7 @@ export default function Dashboard() {
   const bulkDeleteLeads = async () => {
     if (!confirm(`Are you sure you want to expunge ${selectedLeads.length} prospects?`)) return;
     const token = localStorage.getItem('cb_token');
-    await Promise.all(selectedLeads.map(id =>
+    await Promise.all(selectedLeads.map((id: string) =>
         fetch(`${API_BASE}/crm/leads/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } })
     ));
     setSelectedLeads([]);
@@ -324,7 +324,7 @@ export default function Dashboard() {
                         <div className="absolute right-0 mt-4 w-72 bg-white dark:bg-slate-950 border border-slate-200 dark:border-white/5 rounded-3xl shadow-2xl p-4 overflow-hidden animate-in zoom-in-95 fade-in duration-200 z-[100]">
                             <h3 className="text-[10px] font-black uppercase italic tracking-widest text-slate-500 mb-4 px-2">Internal Alerts</h3>
                             <div className="space-y-2 max-h-64 overflow-y-auto">
-                                {notifications.map(n => (
+                                {notifications.map((n: any) => (
                                     <div key={n.id} className="p-3 bg-slate-50 dark:bg-slate-900/50 rounded-2xl border border-white/5 space-y-1">
                                         <div className="text-[7px] font-black text-primary uppercase italic opacity-60">{n.type}</div>
                                         <p className="text-[9px] font-bold text-slate-400 italic leading-tight">{n.message}</p>
@@ -371,10 +371,10 @@ export default function Dashboard() {
                 )}
 
                  <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-                    <KanbanCol title="New Leads" leads={leads.filter(l => (l.status === 'New' || l.status === 'Hunter-AI') && l.company_name.toLowerCase().includes(searchTerm.toLowerCase()))} status="New" onDrop={updateLeadStatus} selectedLeads={selectedLeads} onSelect={(id: string) => setSelectedLeads(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id])} />
-                    <KanbanCol title="In Progress" leads={leads.filter(l => l.status === 'Contacted' && l.company_name.toLowerCase().includes(searchTerm.toLowerCase()))} status="Contacted" onDrop={updateLeadStatus} selectedLeads={selectedLeads} onSelect={(id: string) => setSelectedLeads(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id])} />
-                    <KanbanCol title="Negotiation" leads={leads.filter(l => l.status === 'Qualified' && l.company_name.toLowerCase().includes(searchTerm.toLowerCase()))} status="Qualified" onDrop={updateLeadStatus} selectedLeads={selectedLeads} onSelect={(id: string) => setSelectedLeads(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id])} />
-                    <KanbanCol title="Closed Won" leads={leads.filter(l => l.status === 'Won' && l.company_name.toLowerCase().includes(searchTerm.toLowerCase()))} status="Won" onDrop={updateLeadStatus} selectedLeads={selectedLeads} onSelect={(id: string) => setSelectedLeads(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id])} />
+                    <KanbanCol title="New Leads" leads={leads.filter((l: any) => (l.status === 'New' || l.status === 'Hunter-AI') && l.company_name.toLowerCase().includes(searchTerm.toLowerCase()))} status="New" onDrop={updateLeadStatus} selectedLeads={selectedLeads} onSelect={(id: string) => setSelectedLeads(prev => prev.includes(id) ? prev.filter((x: any) => x !== id) : [...prev, id])} />
+                    <KanbanCol title="In Progress" leads={leads.filter((l: any) => l.status === 'Contacted' && l.company_name.toLowerCase().includes(searchTerm.toLowerCase()))} status="Contacted" onDrop={updateLeadStatus} selectedLeads={selectedLeads} onSelect={(id: string) => setSelectedLeads(prev => prev.includes(id) ? prev.filter((x: any) => x !== id) : [...prev, id])} />
+                    <KanbanCol title="Negotiation" leads={leads.filter((l: any) => l.status === 'Qualified' && l.company_name.toLowerCase().includes(searchTerm.toLowerCase()))} status="Qualified" onDrop={updateLeadStatus} selectedLeads={selectedLeads} onSelect={(id: string) => setSelectedLeads(prev => prev.includes(id) ? prev.filter((x: any) => x !== id) : [...prev, id])} />
+                    <KanbanCol title="Closed Won" leads={leads.filter((l: any) => l.status === 'Won' && l.company_name.toLowerCase().includes(searchTerm.toLowerCase()))} status="Won" onDrop={updateLeadStatus} selectedLeads={selectedLeads} onSelect={(id: string) => setSelectedLeads(prev => prev.includes(id) ? prev.filter((x: any) => x !== id) : [...prev, id])} />
                 </div>
              </div>
           )}
@@ -396,7 +396,7 @@ export default function Dashboard() {
                               </tr>
                           </thead>
                           <tbody>
-                              {tasks.map(t => (
+                              {tasks.map((t: any) => (
                                   <tr key={t.id} className="border-b border-white/5 hover:bg-slate-50 dark:hover:bg-slate-900/30 transition-all">
                                       <td className="px-6 py-4">
                                           <div className="text-[11px] font-black italic uppercase text-foreground">{t.title}</div>
@@ -432,9 +432,9 @@ export default function Dashboard() {
                                   <th className="px-6 py-4 text-[10px] font-black uppercase italic text-slate-500 tracking-widest">Email</th>
                               </tr>
                           </thead>
-                          <tbody>
-                              {globalContacts.map(c => (
-                                  <tr key={c.id} className="border-b border-white/5 hover:bg-slate-50 dark:hover:bg-slate-900/30 transition-all">
+                           <tbody>
+                               {globalContacts.map((c: any) => (
+                                   <tr key={c.id} className="border-b border-white/5 hover:bg-slate-50 dark:hover:bg-slate-900/30 transition-all">
                                       <td className="px-6 py-4">
                                           <div className="text-[11px] font-black italic uppercase text-foreground">{c.first_name} {c.last_name}</div>
                                       </td>
@@ -469,7 +469,7 @@ export default function Dashboard() {
                               </tr>
                           </thead>
                           <tbody>
-                              {objects.map(obj => (
+                              {objects.map((obj: any) => (
                                   <tr key={obj.key} className="border-b border-white/5 hover:bg-slate-50 dark:hover:bg-slate-900/30 transition-all">
                                       <td className="px-6 py-4">
                                           <div className="text-[11px] font-black italic uppercase text-foreground truncate max-w-[300px]">{obj.key.split('/').pop()}</div>
@@ -501,9 +501,9 @@ export default function Dashboard() {
                            <div className="space-y-4">
                                <div>
                                    <label className="text-[9px] font-black uppercase text-slate-500 italic tracking-widest ml-1">Industry Niche</label>
-                                   <select value={huntParams.niche} onChange={e => setHuntParams({...huntParams, niche: e.target.value})} className="w-full bg-slate-50 dark:bg-slate-900 border border-white/5 rounded-xl p-3 text-[10px] font-black italic uppercase outline-none focus:border-orange-500 mt-1">
-                                       {TEMPLATES.map(t => <option key={t.id} value={t.niche}>{t.name}</option>)}
-                                   </select>
+                                    <select value={huntParams.niche} onChange={e => setHuntParams({...huntParams, niche: e.target.value})} className="w-full bg-slate-50 dark:bg-slate-900 border border-white/5 rounded-xl p-3 text-[10px] font-black italic uppercase outline-none focus:border-orange-500 mt-1">
+                                        {TEMPLATES.map((t: any) => <option key={t.id} value={t.niche}>{t.name}</option>)}
+                                    </select>
                                </div>
                                 <div>
                                    <label className="text-[9px] font-black uppercase text-slate-500 italic tracking-widest ml-1">Discovery Engine</label>
@@ -563,9 +563,9 @@ export default function Dashboard() {
                                   <th className="px-6 py-4"></th>
                               </tr>
                           </thead>
-                          <tbody>
-                              {dashboardUsers.map(u => (
-                                  <tr key={u.id} className="border-b border-white/5 hover:bg-slate-50 dark:hover:bg-slate-900/30 transition-all group">
+                           <tbody>
+                               {dashboardUsers.map((u: any) => (
+                                   <tr key={u.id} className="border-b border-white/5 hover:bg-slate-50 dark:hover:bg-slate-900/30 transition-all group">
                                       <td className="px-6 py-4">
                                           <div className="w-8 h-8 rounded-lg bg-slate-200 dark:bg-slate-900 flex items-center justify-center text-slate-500"><User size={16}/></div>
                                       </td>
@@ -608,7 +608,7 @@ export default function Dashboard() {
                               </tr>
                           </thead>
                           <tbody>
-                              {auditLogs.map((log: any) => (
+                               {auditLogs.map((log: any) => (
                                   <tr key={log.id} className="border-b border-white/5 hover:bg-slate-50 dark:hover:bg-slate-900/30 transition-all">
                                       <td className="px-6 py-4">
                                           <div className="text-[11px] font-black italic uppercase text-foreground">{log.r2_key ? 'File Upload' : 'Lead Modified'}</div>

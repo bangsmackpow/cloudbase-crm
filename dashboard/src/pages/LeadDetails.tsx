@@ -355,7 +355,7 @@ export default function LeadDetails() {
                    <button className="bg-orange-500 text-white p-2.5 rounded-xl shadow-lg shadow-orange-500/20 active:scale-95"><Plus size={16}/></button>
                 </form>
                 <div className="space-y-3">
-                   {tasks.map(t => (
+                   {tasks.map((t: any) => (
                      <div key={t.id} className="flex gap-4 items-center group p-3 bg-slate-50 dark:bg-slate-950 border border-white/5 rounded-xl transition-all">
                         <button onClick={() => toggleTask(t.id, t.completed)} className={`w-5 h-5 rounded-md flex items-center justify-center border border-white/10 transition-all ${t.completed ? 'bg-orange-500 border-none animate-in zoom-in' : 'bg-slate-800'}`}>
                            {t.completed && <CheckCircle size={12} className="text-white"/>}
@@ -377,7 +377,7 @@ export default function LeadDetails() {
                    <button className="bg-slate-200 dark:bg-slate-800 text-foreground p-2.5 rounded-xl active:scale-95"><Send size={16}/></button>
                 </form>
                 <div className="space-y-6 relative border-l border-slate-100 dark:border-white/10 ml-2 pl-6">
-                   {activities.map(a => (
+                   {activities.map((a: any) => (
                      <div key={a.id} className="relative">
                         <div className="absolute -left-[33px] top-0 w-4 h-4 bg-white dark:bg-slate-950 border border-slate-200 dark:border-white/10 rounded-full flex items-center justify-center">
                            <div className="w-1.5 h-1.5 rounded-full bg-slate-500"></div>
