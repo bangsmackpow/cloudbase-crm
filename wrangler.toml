@@ -17,6 +17,7 @@ binding = "AI"
 
 [vars]
 JWT_SECRET = "dev-secret-123"
+STRIPE_SECRET_KEY = "sk_test_mock_123"
 
 # Add this at the bottom
 [triggers]

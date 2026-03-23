@@ -1,4 +1,6 @@
 import { Hono } from 'hono';
+import { rescanSingleLead } from '../hunter/hunter_engine';
+import { triggerWorkflow } from './workflows';
 
 // CRM Core Operations v4.2 (Fixed Context Typing)
 const crm = new Hono<{ 
@@ -157,6 +159,9 @@ crm.patch('/leads/:id', async (c) => {
     await c.env.DB.prepare(
         "INSERT INTO activities (id, lead_id, tenant_id, type, content) VALUES (?, ?, ?, ?, ?)"
     ).bind(crypto.randomUUID(), id, user.tenant_id, 'Status Change', `Stage updated to: ${status}`).run();
+    
+    // 🔥 TRIGGER WORKFLOW LOGIC (Phase 9)
+    await triggerWorkflow(c.env.DB, user.tenant_id, 'STATUS_CHANGED', status, id);
   }
 
   return c.json({ success: true });
@@ -170,9 +175,6 @@ crm.get('/contacts/:leadId', async (c) => {
     "SELECT * FROM contacts WHERE lead_id = ? AND tenant_id = ? ORDER BY first_name ASC"
   ).bind(leadId, user.tenant_id).all();
   return c.json(results);
-});
-
-  return c.json({ success: true, id });
 });
 
 crm.delete('/contacts/:id', async (c) => {
@@ -190,6 +192,88 @@ crm.get('/vault/:leadId', async (c) => {
     "SELECT * FROM audit_history WHERE lead_id = ? AND tenant_id = ? ORDER BY created_at DESC"
   ).bind(leadId, user.tenant_id).all();
   return c.json(results);
+});
+
+// --- MONITORING (Phase 9: Audit Intelligence 2.0) ---
+crm.get('/monitoring/:leadId', async (c) => {
+    const leadId = c.req.param('leadId');
+    const user = c.get('jwtPayload');
+    const { results } = await c.env.DB.prepare(
+        "SELECT * FROM monitor_history WHERE lead_id = ? AND tenant_id = ? ORDER BY scanned_at DESC LIMIT 10"
+    ).bind(leadId, user.tenant_id).all();
+    return c.json(results);
+});
+
+crm.patch('/monitoring/:id', async (c) => {
+    const id = c.req.param('id');
+    const user = c.get('jwtPayload');
+    const { enabled } = await c.req.json();
+    await c.env.DB.prepare(
+        "UPDATE leads SET auto_monitoring_enabled = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND tenant_id = ?"
+    ).bind(enabled ? 1 : 0, id, user.tenant_id).run();
+    return c.json({ success: true });
+});
+
+crm.post('/rescan/:id', async (c) => {
+    const id = c.req.param('id');
+    const user = c.get('jwtPayload');
+    const result = await rescanSingleLead(id, c.env, user.tenant_id);
+    return c.json(result);
+});
+
+crm.post('/checkout/:id', async (c) => {
+    const id = c.req.param('id');
+    const user = c.get('jwtPayload');
+    
+    // 1. Fetch lead details
+    const lead = await c.env.DB.prepare(
+        "SELECT company_name, deal_value FROM leads WHERE id = ? AND tenant_id = ?"
+    ).bind(id, user.tenant_id).first();
+    
+    if (!lead) return c.json({ error: "Node invalid" }, 404);
+
+    // 2. Stripe Checkout Integration (Native Fetch for zero-dep edge)
+    const stripeKey = c.env.STRIPE_SECRET_KEY;
+    const amount = (lead.deal_value || 1500) * 100; // in cents
+
+    const params = new URLSearchParams({
+        'success_url': `http://localhost:5173/lead/${id}?payment=success`,
+        'cancel_url': `http://localhost:5173/lead/${id}?payment=failed`,
+        'line_items[0][price_data][currency]': 'usd',
+        'line_items[0][price_data][product_data][name]': `Technical Management: ${lead.company_name}`,
+        'line_items[0][price_data][unit_amount]': amount.toString(),
+        'line_items[0][quantity]': '1',
+        'mode': 'payment'
+    });
+
+    const stripeRes = await fetch('https://api.stripe.com/v1/checkout/sessions', {
+        method: 'POST',
+        headers: {
+            'Authorization': `Bearer ${stripeKey}`,
+            'Content-Type': 'application/x-www-form-urlencoded'
+        },
+        body: params
+    });
+
+    const session = await stripeRes.json();
+    return c.json({ url: (session as any).url || 'https://stripe.com/docs/testing' });
+});
+
+crm.get('/notifications', async (c) => {
+    const user = c.get('jwtPayload');
+    const { results } = await c.env.DB.prepare(
+        "SELECT * FROM notifications WHERE user_id = ? AND tenant_id = ? AND is_read = 0 ORDER BY created_at DESC LIMIT 10"
+    ).bind(user.email, user.tenant_id).all();
+    return c.json(results);
+});
+
+crm.patch('/notifications/read/:id', async (c) => {
+    const id = c.req.param('id');
+    const user = c.get('jwtPayload');
+    await c.env.DB.prepare(
+        "UPDATE notifications SET is_read = 1 WHERE id = ? AND user_id = ?"
+    ).bind(id, user.email).run();
+    return c.json({ success: true });
 });
 
 export default crm;

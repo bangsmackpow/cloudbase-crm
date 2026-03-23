@@ -58,3 +58,39 @@ export const processNicheDiscovery = async (niche: string, location: string, env
 
   return { success: true, count: data.length, data };
 };
+
+export const rescanSingleLead = async (leadId: string, env: any, tenantId: string) => {
+    const lead = await env.DB.prepare(
+        "SELECT * FROM leads WHERE id = ? AND tenant_id = ?"
+    ).bind(leadId, tenantId).first();
+    
+    if (!lead) return { success: false, error: 'Lead not found' };
+
+    console.log(`[MONITOR] Rescanning ${lead.company_name}...`);
+    const website = lead.website_url;
+    const start = Date.now();
+    let sslValid = website.startsWith('https://');
+    let responseTimeMillis = 2000;
+    
+    try {
+        const headRes = await fetch(website, { 
+          method: 'HEAD', 
+          redirect: 'follow',
+          headers: { 'User-Agent': 'CloudBase-Monitor/2.0' }
+        }).catch(() => null);
+        
+        if (headRes) responseTimeMillis = Date.now() - start;
+    } catch (e) {}
+
+    const newScore = sslValid ? (responseTimeMillis < 1000 ? 95 : 80) : 50;
+    
+    await env.DB.prepare(
+        "UPDATE leads SET ai_score = ?, last_scanned_at = CURRENT_TIMESTAMP, next_scan_at = datetime('now', '+30 days') WHERE id = ?"
+    ).bind(newScore, leadId).run();
+
+    await env.DB.prepare(
+        "INSERT INTO monitor_history (id, lead_id, tenant_id, score, scanned_at) VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)"
+    ).bind(crypto.randomUUID(), leadId, tenantId, newScore).run();
+
+    return { success: true, newScore };
+};

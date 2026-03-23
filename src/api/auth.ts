@@ -1,12 +1,13 @@
 import { Hono } from 'hono';
 import { sign } from 'hono/jwt';
-import { verifyPassword } from '../auth/crypto';
+import { verifyPassword, hashPassword } from '../auth/crypto';
 
 const auth = new Hono<{ 
   Bindings: any, 
   Variables: { jwtPayload: any } 
 }>();
 
+// --- ADMIN: LIST ALL USERS ---
 auth.get('/users', async (c) => {
   const user = c.get('jwtPayload');
   if (user.role !== 'admin') return c.json({ error: "Forbidden" }, 403);
@@ -18,6 +19,83 @@ auth.get('/users', async (c) => {
   return c.json(results);
 });
 
+// --- ADMIN: CREATE NEW USER ---
+auth.post('/users', async (c) => {
+    const user = c.get('jwtPayload');
+    if (user.role !== 'admin') return c.json({ error: "Forbidden" }, 403);
+    
+    const { email, password, role } = await c.req.json();
+    const id = crypto.randomUUID();
+    const passHash = await hashPassword(password);
+    
+    await c.env.DB.prepare(
+        "INSERT INTO _users (id, tenant_id, email, password_hash, role) VALUES (?, ?, ?, ?, ?)"
+    ).bind(id, user.tenant_id, email, passHash, role || 'staff').run();
+    
+    return c.json({ success: true, id });
+});
+
+// --- ADMIN: UPDATE ANY USER (EMAIL/PASSWORD/ROLE) ---
+auth.patch('/users/:id', async (c) => {
+    const admin = c.get('jwtPayload');
+    if (admin.role !== 'admin') return c.json({ error: "Forbidden" }, 403);
+    const targetId = c.req.param('id');
+    const { email, password, role } = await c.req.json();
+    
+    let query = "UPDATE _users SET updated_at = CURRENT_TIMESTAMP";
+    const params = [];
+    
+    if (email) { query += ", email = ?"; params.push(email); }
+    if (role) { query += ", role = ?"; params.push(role); }
+    if (password) { 
+        const passHash = await hashPassword(password);
+        query += ", password_hash = ?"; params.push(passHash); 
+    }
+    
+    query += " WHERE id = ? AND tenant_id = ?";
+    params.push(targetId, admin.tenant_id);
+    
+    await c.env.DB.prepare(query).bind(...params).run();
+    return c.json({ success: true });
+});
+
+// --- ADMIN: DELETE USER ---
+auth.delete('/users/:id', async (c) => {
+    const admin = c.get('jwtPayload');
+    if (admin.role !== 'admin') return c.json({ error: "Forbidden" }, 403);
+    const targetId = c.req.param('id');
+    
+    await c.env.DB.prepare("DELETE FROM _users WHERE id = ? AND tenant_id = ?").bind(targetId, admin.tenant_id).run();
+    return c.json({ success: true });
+});
+
+// --- SELF: RESET PASSWORD ---
+auth.patch('/me/password', async (c) => {
+    const user = c.get('jwtPayload');
+    const { oldPassword, newPassword } = await c.req.json();
+    
+    // Verify old password
+    const dbUser = await c.env.DB.prepare("SELECT password_hash FROM _users WHERE id = ?").bind(user.sub).first();
+    if (!dbUser || !(await verifyPassword(oldPassword, dbUser.password_hash))) {
+        return c.json({ error: "Invalid original password" }, 401);
+    }
+    
+    const newHash = await hashPassword(newPassword);
+    await c.env.DB.prepare("UPDATE _users SET password_hash = ? WHERE id = ?").bind(newHash, user.sub).run();
+    
+    return c.json({ success: true });
+});
+
+// --- SELF: CHANGE LOGIN EMAIL ---
+auth.patch('/me/email', async (c) => {
+    const user = c.get('jwtPayload');
+    const { newEmail } = await c.req.json();
+    
+    await c.env.DB.prepare("UPDATE _users SET email = ? WHERE id = ?").bind(newEmail, user.sub).run();
+    return c.json({ success: true, message: "Email updated. Next login will require new email." });
+});
+
+// --- LOGIN ---
 auth.post('/login', async (c) => {
   const { email, password } = await c.req.json();
   

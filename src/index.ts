@@ -55,16 +55,23 @@ app.post('/api/public/audit-lite', async (c) => {
   return c.json({ summary: (res as any).response || (res as any).summary });
 });
 
-// TEST DRIVE ENDPOINT (Bypasses JWT for validation)
-app.get('/api/test/hunt', async (c) => {
-  const niche = c.req.query('niche') || 'Law Firms';
-  const location = c.req.query('location') || 'Creston, IA';
-  const tenant_id = 'built-networks-001';
-  const result = await processNicheDiscovery(niche, location, c.env, tenant_id);
-  return c.json({ message: "Test Hunt Triggered", result });
+// 4. Public Client Portal (Phase 9: Transparency)
+app.get('/api/portal/:id', async (c) => {
+    const id = c.req.param('id');
+    const lead = await c.env.DB.prepare(
+        "SELECT company_name, website_url, ai_score, last_scanned_at, status FROM leads WHERE id = ?"
+    ).bind(id).first();
+    
+    if (!lead) return c.json({ error: "Node not found" }, 404);
+
+    const { results: history } = await c.env.DB.prepare(
+        "SELECT score, scanned_at FROM monitor_history WHERE lead_id = ? ORDER BY scanned_at DESC LIMIT 5"
+    ).bind(id).all();
+
+    return c.json({ lead, history });
 });
 
-// 4. Protected CRM Sub-App
+// 5. Protected CRM Sub-App
 const api = new Hono<{ Bindings: any }>();
 
 // JWT Guard - Extracts tenant_id and role

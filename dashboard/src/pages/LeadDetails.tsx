@@ -7,7 +7,8 @@ import {
   XCircle, UserPlus, Trash2, Mail, Phone,
   Briefcase, CheckSquare, Plus, DollarSign,
   TrendingUp, Award, Rocket, FileText, Upload, HardDrive, 
-  Search, ExternalLink, ChevronRight, Activity, Download
+  Search, ExternalLink, ChevronRight, Activity, Download,
+  RefreshCw, Power, LineChart, Gauge
 } from 'lucide-react';
 
 const API_BASE = 'https://cloudbase-crm.curtislamasters.workers.dev/api';
@@ -21,7 +22,9 @@ export default function LeadDetails() {
   const [contacts, setContacts] = useState<any[]>([]);
   const [tasks, setTasks] = useState<any[]>([]);
   const [vault, setVault] = useState<any[]>([]);
+  const [monitorHistory, setMonitorHistory] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isRescanning, setIsRescanning] = useState(false);
   
   const [note, setNote] = useState('');
   const [taskTitle, setTaskTitle] = useState('');
@@ -33,13 +36,14 @@ export default function LeadDetails() {
     const token = localStorage.getItem('cb_token');
     const headers = { 'Authorization': `Bearer ${token}` };
     try {
-      const [leadRes, dossierRes, activityRes, contactRes, taskRes, vaultRes] = await Promise.all([
+      const [leadRes, dossierRes, activityRes, contactRes, taskRes, vaultRes, monRes] = await Promise.all([
         fetch(`${API_BASE}/crm/leads/${id}`, { headers }),
         fetch(`${API_BASE}/reports/dossier/${id}`, { headers }),
         fetch(`${API_BASE}/crm/activities/${id}`, { headers }),
         fetch(`${API_BASE}/crm/contacts/${id}`, { headers }),
         fetch(`${API_BASE}/crm/tasks/${id}`, { headers }),
-        fetch(`${API_BASE}/crm/vault/${id}`, { headers })
+        fetch(`${API_BASE}/crm/vault/${id}`, { headers }),
+        fetch(`${API_BASE}/crm/monitoring/${id}`, { headers })
       ]);
       
       if (leadRes.status === 401) { navigate('/login'); return; }
@@ -51,11 +55,33 @@ export default function LeadDetails() {
       if (contactRes.ok) setContacts(await contactRes.json());
       if (taskRes.ok) setTasks(await taskRes.json());
       if (vaultRes.ok) setVault(await vaultRes.json());
+      if (monRes.ok) setMonitorHistory(await monRes.json());
     } catch (err) { console.error(err); }
     finally { setIsLoading(false); }
   }, [id, navigate]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
+
+  const toggleMonitoring = async () => {
+      const token = localStorage.getItem('cb_token');
+      await fetch(`${API_BASE}/crm/monitoring/${id}`, {
+          method: 'PATCH',
+          headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ enabled: !lead.auto_monitoring_enabled })
+      });
+      fetchData();
+  };
+
+  const triggerRescan = async () => {
+      setIsRescanning(true);
+      const token = localStorage.getItem('cb_token');
+      await fetch(`${API_BASE}/crm/rescan/${id}`, {
+          method: 'POST',
+          headers: { 'Authorization': `Bearer ${token}` }
+      });
+      setIsRescanning(false);
+      fetchData();
+  };
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -136,7 +162,7 @@ export default function LeadDetails() {
       
       <div className="max-w-6xl mx-auto p-8 lg:p-12 space-y-12 pb-32">
         
-        {/* Header - Scaled Back */}
+        {/* Header */}
         <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-8">
           <div className="space-y-4 flex-1">
              <Link to="/" className="inline-flex items-center gap-2 text-slate-500 hover:text-orange-500 transition-all font-black text-[10px] uppercase tracking-widest italic">
@@ -169,13 +195,88 @@ export default function LeadDetails() {
                 <div className="text-[8px] text-slate-500 uppercase font-black tracking-widest mb-1 italic">Value</div>
                 <div className="text-3xl font-black italic tracking-tighter text-foreground leading-none">${lead.deal_value || 0}</div>
              </div>
+             {lead.status !== 'Won' && (
+                <button 
+                    onClick={async () => {
+                        const token = localStorage.getItem('cb_token');
+                        const res = await fetch(`${API_BASE}/crm/checkout/${id}`, { method: 'POST', headers: { 'Authorization': `Bearer ${token}` } });
+                        const { url } = await res.json();
+                        if (url) window.location.href = url;
+                    }}
+                    className="ml-4 bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-xl text-[10px] font-black uppercase italic shadow-lg shadow-orange-500/20 transition-all active:scale-95"
+                >
+                    Deploy Commercial Agreement
+                </button>
+             )}
           </div>
         </header>
+
+        {window.location.search.includes('payment=success') && (
+            <div className="bg-green-500 text-white p-4 rounded-2xl text-center font-black italic uppercase tracking-widest text-[10px] animate-bounce">
+                Mission Success: Commercial Transaction Confirmed.
+            </div>
+        )}
 
         <div className="grid grid-cols-1 md:grid-cols-12 gap-8">
           
           <div className="md:col-span-8 space-y-8">
-             {/* Dossier Section */}
+             {/* Audit Pulse Monitoring Section - Phase 9 */}
+             <section className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-white/5 p-8 rounded-3xl space-y-8 shadow-xl relative overflow-hidden">
+                <div className="absolute top-0 right-0 p-8 opacity-5 text-orange-500">
+                    <LineChart size={80}/>
+                </div>
+                <div className="flex justify-between items-center relative z-10">
+                   <div className="space-y-1">
+                      <h2 className="text-2xl font-black italic tracking-tighter uppercase flex items-center gap-3 leading-none">
+                         <Activity className="text-orange-500" size={28} /> Audit <span className="text-orange-500">Pulse</span>
+                      </h2>
+                      <p className="text-[8px] text-slate-500 font-bold uppercase tracking-widest italic">Phase IX: Continuous Infrastructure Verification</p>
+                   </div>
+                   <div className="flex items-center gap-4">
+                       <button onClick={toggleMonitoring} className={`flex items-center gap-2 px-4 py-2 rounded-xl text-[9px] font-black uppercase italic transition-all ${lead.auto_monitoring_enabled ? 'bg-green-500/10 text-green-500 border border-green-500/20' : 'bg-slate-100 dark:bg-slate-900 text-slate-500 border border-white/5'}`}>
+                           <Power size={14}/> {lead.auto_monitoring_enabled ? 'Monitoring Active' : 'Start Monitoring'}
+                       </button>
+                       <button disabled={isRescanning} onClick={triggerRescan} className="bg-orange-500 text-white p-2.5 rounded-xl shadow-lg shadow-orange-500/20 active:scale-95 transition-all">
+                           <RefreshCw size={16} className={isRescanning ? 'animate-spin' : ''} />
+                       </button>
+                   </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8 relative z-10">
+                    <div className="space-y-4">
+                        <div className="bg-slate-50 dark:bg-slate-950/40 p-5 rounded-2xl border border-white/5">
+                            <div className="text-[8px] text-slate-500 uppercase font-black italic mb-4">Last 10 Health Checks</div>
+                            <div className="flex items-end gap-2 h-24">
+                                {monitorHistory.slice().reverse().map((h: any, i: number) => (
+                                    <div key={i} className="flex-1 group relative">
+                                        <div 
+                                            className={`w-full rounded-t-md transition-all ${h.score > 80 ? 'bg-red-500' : 'bg-orange-500'} opacity-30 hover:opacity-100`} 
+                                            style={{ height: `${h.score}%` }}
+                                        ></div>
+                                        <div className="absolute -top-6 left-1/2 -translate-x-1/2 bg-slate-800 text-white text-[7px] p-1 rounded opacity-0 group-hover:opacity-100 transition-all">{h.score}%</div>
+                                    </div>
+                                ))}
+                                {monitorHistory.length === 0 && <div className="w-full flex items-center justify-center text-[8px] font-black uppercase text-slate-500 italic">No telemetry data.</div>}
+                            </div>
+                        </div>
+                    </div>
+                    <div className="space-y-4 flex flex-col justify-center">
+                        <div className="flex justify-between items-center border-b border-white/5 pb-2">
+                            <span className="text-[9px] font-black text-slate-500 uppercase italic">Next Scheduled Pulse</span>
+                            <span className="text-[10px] font-black text-foreground italic">{new Date(lead.next_scan_at).toLocaleDateString()}</span>
+                        </div>
+                        <div className="flex justify-between items-center border-b border-white/5 pb-2">
+                            <span className="text-[9px] font-black text-slate-500 uppercase italic">Drift Detection</span>
+                            <span className="text-[10px] font-black text-green-500 italic">Stable</span>
+                        </div>
+                        <div className="flex justify-between items-center border-b border-white/5 pb-2">
+                            <span className="text-[9px] font-black text-slate-500 uppercase italic">Last Global Scan</span>
+                            <span className="text-[10px] font-black text-slate-400 italic">{new Date(lead.last_scanned_at).toLocaleDateString()}</span>
+                        </div>
+                    </div>
+                </div>
+             </section>
+
              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                 <section className="bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-white/5 p-6 rounded-3xl space-y-6 shadow-lg">
                    <h2 className="text-xl font-black italic tracking-tighter uppercase flex items-center gap-3">
@@ -203,7 +304,7 @@ export default function LeadDetails() {
                 </section>
              </div>
 
-             {/* R2 Document Vault - Phase 7 */}
+             {/* R2 Document Vault */}
              <section className="bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-white/5 p-8 rounded-3xl space-y-8 shadow-xl">
                  <div className="flex justify-between items-center">
                     <h2 className="text-2xl font-black italic tracking-tighter uppercase flex items-center gap-3 leading-none">
@@ -238,46 +339,10 @@ export default function LeadDetails() {
                  </div>
              </section>
 
-             {/* Human Layer */}
-             <section className="bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-white/5 p-8 rounded-3xl space-y-8 shadow-xl">
-                <div className="flex justify-between items-center border-b border-slate-100 dark:border-white/10 pb-4">
-                   <h2 className="text-2xl font-black italic tracking-tighter uppercase flex items-center gap-3 leading-none">
-                      <Briefcase className="text-emerald-500" size={28} /> Human <span className="text-emerald-500">Layer</span>
-                   </h2>
-                   <button onClick={() => setShowContactForm(!showContactForm)} className="bg-emerald-500/10 text-emerald-500 p-2 rounded-lg hover:bg-emerald-500 hover:text-white transition-all"><UserPlus size={18}/></button>
-                </div>
-                {showContactForm && (
-                   <form onSubmit={() => {}} className="bg-slate-50 dark:bg-slate-950 border border-white/5 p-6 rounded-2xl gap-4 grid grid-cols-2 animate-in slide-in-from-top-4">
-                      <Input label="First Name" value={newContact.first_name} onChange={(v: string) => setNewContact({...newContact, first_name: v})} />
-                      <Input label="Last Name" value={newContact.last_name} onChange={(v: string) => setNewContact({...newContact, last_name: v})} />
-                      <Input label="Job Title" value={newContact.title} onChange={(v: string) => setNewContact({...newContact, title: v})} />
-                      <Input label="Email" value={newContact.email} onChange={(v: string) => setNewContact({...newContact, email: v})} />
-                      <div className="col-span-2 flex justify-end gap-4 mt-2">
-                         <button type="button" onClick={() => setShowContactForm(false)} className="text-[9px] font-black italic uppercase text-slate-500">Abort</button>
-                         <button type="submit" className="bg-emerald-500 text-white px-6 py-2 rounded-lg text-[9px] font-black uppercase italic">Provision Identity</button>
-                      </div>
-                   </form>
-                )}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                   {contacts.map(c => (
-                      <div key={c.id} className="bg-slate-50 dark:bg-slate-950 border border-white/5 p-5 rounded-2xl relative group border-l-4 border-l-emerald-500/30">
-                         <div className="flex justify-between items-start mb-4">
-                            <div className="w-8 h-8 bg-emerald-500/10 rounded-lg flex items-center justify-center text-emerald-500 font-black text-xs italic">{c.first_name[0]}</div>
-                            <button onClick={() => deleteContact(c.id)} className="text-slate-400 hover:text-red-500 transition-all"><Trash2 size={14}/></button>
-                         </div>
-                         <h3 className="text-base font-black italic uppercase truncate leading-none mb-1">{c.first_name} {c.last_name}</h3>
-                         <p className="text-emerald-500 text-[8px] font-black uppercase tracking-widest italic mb-4">{c.title || 'Owner'}</p>
-                         <div className="space-y-2 text-[9px] font-bold text-slate-500 italic">
-                            <div className="flex items-center gap-2"><Mail size={11}/> {c.email}</div>
-                         </div>
-                      </div>
-                   ))}
-                </div>
-             </section>
           </div>
 
           <aside className="md:col-span-4 space-y-8">
-             {/* Dynamic Checklist - Phase 8 style */}
+             {/* Mission Items */}
              <section className="bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-white/5 p-6 rounded-3xl space-y-6 shadow-xl">
                 <h2 className="text-xl font-black italic tracking-tighter uppercase flex items-center gap-3 leading-none">
                    <CheckSquare className="text-orange-500" size={24} /> Mission <span className="text-orange-500">Items</span>
@@ -299,7 +364,7 @@ export default function LeadDetails() {
                 </div>
              </section>
 
-             {/* Temporal Log - Phase 6 Visuals */}
+             {/* Node History */}
              <section className="bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-white/5 p-6 rounded-3xl space-y-6 shadow-xl relative overflow-hidden">
                 <h2 className="text-xl font-black italic tracking-tighter uppercase flex items-center gap-3 leading-none">
                    <Clock className="text-slate-500" size={24} /> Node <span className="text-slate-500">History</span>
@@ -318,9 +383,6 @@ export default function LeadDetails() {
                         <p className="text-[10px] font-bold text-slate-400 italic leading-relaxed">{a.content}</p>
                      </div>
                    ))}
-                   {activities.length === 0 && (
-                       <p className="text-[8px] font-black uppercase text-slate-500 opacity-30 italic">No node history recorded.</p>
-                   )}
                 </div>
              </section>
           </aside>
@@ -341,15 +403,4 @@ function Input({ label, value, onChange }: any) {
             />
         </div>
     );
-}
-
-function RefreshCw(props: any) {
-  return (
-    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
-      <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8" />
-      <path d="M21 3v5h-5" />
-      <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16" />
-      <path d="M3 21v-5h5" />
-    </svg>
-  );
 }

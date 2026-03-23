@@ -2,6 +2,7 @@ import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import Dashboard from './pages/Dashboard';
 import LeadDetails from './pages/LeadDetails';
+import ClientPortal from './pages/ClientPortal';
 import Login from './pages/Login';
 
 // --- Protected Route Wrapper ---
@@ -23,6 +24,7 @@ export default function App() {
         <Routes>
           {/* Public Routes */}
           <Route path="/login" element={<Login />} />
+          <Route path="/portal/:id" element={<ClientPortal />} />
 
           {/* Protected Command Center Routes */}
           <Route 
