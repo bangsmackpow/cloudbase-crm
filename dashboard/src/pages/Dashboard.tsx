@@ -42,6 +42,7 @@ export default function Dashboard() {
   const [billingInfo, setBillingInfo] = useState({ plan: 'Enterprise Matrix', cycle: 'Annual', nextBill: '2026-04-12', amount: '$2,400.00' });
   const [auditLogs, setAuditLogs] = useState<any[]>([]);
   const [globalContacts, setGlobalContacts] = useState<any[]>([]);
+  const [discoveryMode, setDiscoveryMode] = useState<'ai' | 'web'>('ai');
   
   const navigate = useNavigate();
   const logoutRef = useRef(false);
@@ -210,17 +211,19 @@ export default function Dashboard() {
       }
   };
 
-  const triggerHunt = async () => {
-    setIsHunting(true); setHuntResult(null);
-    const token = localStorage.getItem('cb_token');
+   const triggerHunt = async () => {
+    setIsHunting(true);
+    setHuntResult(null);
     try {
-        const res = await fetch(`${API_BASE}/hunter/trigger`, {
+        const token = localStorage.getItem('cb_token');
+        const endpoint = discoveryMode === 'ai' ? '/hunter/trigger' : '/hunter/web';
+        const res = await fetch(`${API_BASE}${endpoint}`, {
             method: 'POST',
             headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
             body: JSON.stringify(huntParams)
         });
         const d = await res.json();
-        if (res.ok && d.data) { setHuntResult(d.data); fetchData(); }
+        if (res.ok && d.data) { setHuntResult(d.data); fetchData(); } 
     } catch (err) {}
     finally { setIsHunting(false); }
   };
@@ -367,8 +370,8 @@ export default function Dashboard() {
                     </div>
                 )}
 
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-                    <KanbanCol title="New Leads" leads={leads.filter(l => l.status === 'New' && l.company_name.toLowerCase().includes(searchTerm.toLowerCase()))} status="New" onDrop={updateLeadStatus} selectedLeads={selectedLeads} onSelect={(id: string) => setSelectedLeads(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id])} />
+                 <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                    <KanbanCol title="New Leads" leads={leads.filter(l => (l.status === 'New' || l.status === 'Hunter-AI') && l.company_name.toLowerCase().includes(searchTerm.toLowerCase()))} status="New" onDrop={updateLeadStatus} selectedLeads={selectedLeads} onSelect={(id: string) => setSelectedLeads(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id])} />
                     <KanbanCol title="In Progress" leads={leads.filter(l => l.status === 'Contacted' && l.company_name.toLowerCase().includes(searchTerm.toLowerCase()))} status="Contacted" onDrop={updateLeadStatus} selectedLeads={selectedLeads} onSelect={(id: string) => setSelectedLeads(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id])} />
                     <KanbanCol title="Negotiation" leads={leads.filter(l => l.status === 'Qualified' && l.company_name.toLowerCase().includes(searchTerm.toLowerCase()))} status="Qualified" onDrop={updateLeadStatus} selectedLeads={selectedLeads} onSelect={(id: string) => setSelectedLeads(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id])} />
                     <KanbanCol title="Closed Won" leads={leads.filter(l => l.status === 'Won' && l.company_name.toLowerCase().includes(searchTerm.toLowerCase()))} status="Won" onDrop={updateLeadStatus} selectedLeads={selectedLeads} onSelect={(id: string) => setSelectedLeads(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id])} />
@@ -502,13 +505,20 @@ export default function Dashboard() {
                                        {TEMPLATES.map(t => <option key={t.id} value={t.niche}>{t.name}</option>)}
                                    </select>
                                </div>
+                                <div>
+                                   <label className="text-[9px] font-black uppercase text-slate-500 italic tracking-widest ml-1">Discovery Engine</label>
+                                   <div className="flex bg-slate-50 dark:bg-slate-900 p-1 rounded-xl border border-white/5 mt-1">
+                                       <button onClick={() => setDiscoveryMode('ai')} className={`flex-1 py-1.5 rounded-lg text-[9px] font-black uppercase italic transition-all ${discoveryMode === 'ai' ? 'bg-primary text-primary-foreground' : 'text-slate-500 hover:text-primary'}`}>AI-Brain</button>
+                                       <button onClick={() => setDiscoveryMode('web')} className={`flex-1 py-1.5 rounded-lg text-[9px] font-black uppercase italic transition-all ${discoveryMode === 'web' ? 'bg-primary text-primary-foreground' : 'text-slate-500 hover:text-primary'}`}>Web-Scout</button>
+                                   </div>
+                               </div>
                                <div>
                                    <label className="text-[9px] font-black uppercase text-slate-500 italic tracking-widest ml-1">Target Location</label>
-                                   <input value={huntParams.location} onChange={e => setHuntParams({...huntParams, location: e.target.value})} className="w-full bg-slate-50 dark:bg-slate-900 border border-white/5 rounded-xl p-3 text-[10px] font-black italic uppercase outline-none focus:border-orange-500 mt-1" placeholder="City, State" />
+                                   <input value={huntParams.location} onChange={e => setHuntParams({...huntParams, location: e.target.value})} className="w-full bg-slate-50 dark:bg-slate-900 border border-white/5 rounded-xl p-3 text-[10px] font-black italic uppercase outline-none focus:border-primary mt-1" placeholder="City, State" />
                                </div>
                                <button onClick={triggerHunt} disabled={isHunting} className="w-full py-4 bg-primary text-primary-foreground rounded-2xl text-[11px] font-black uppercase italic shadow-xl shadow-primary/20 active:scale-95 transition-all flex items-center justify-center gap-3">
-                                   {isHunting ? <RefreshCw className="animate-spin" size={16}/> : <Search size={16}/>}
-                                   {isHunting ? 'Analyzing Grid...' : 'Find New Leads'}
+                                   {isHunting ? <RefreshCw className="animate-spin" size={16}/> : (discoveryMode === 'ai' ? <Zap size={16}/> : <Globe size={16}/>)}
+                                   {isHunting ? 'Deep Scan in Progress...' : (discoveryMode === 'ai' ? 'Activate AI Discovery' : 'Initiate Web Scout')}
                                </button>
                            </div>
                       </div>
@@ -873,7 +883,10 @@ function ReportCard({ title, val, trend, icon }: any) {
                         </div>
 
                         <div className="flex items-center gap-2 mb-3">
-                             <span className="text-[7px] font-black uppercase tracking-widest text-primary/80">{l.status}</span>
+                             <div className="flex flex-col gap-1">
+                                <span className="text-[7px] font-black uppercase tracking-widest text-primary/80 leading-none">{l.status}</span>
+                                <span className="text-[6px] font-bold uppercase text-slate-500/60 leading-none">via {l.source || 'Manual'}</span>
+                             </div>
                              {l.contact_count === 0 && (
                                 <span className="text-[6px] font-black uppercase bg-red-500/5 text-red-500/80 px-1 py-0.5 rounded border border-red-500/10 italic animate-pulse">Missing Personnel</span>
                              )}

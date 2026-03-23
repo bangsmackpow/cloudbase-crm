@@ -45,12 +45,12 @@ crm.get('/stats', async (c) => {
 // --- CREATE LEAD ---
 crm.post('/leads', async (c) => {
   const user = c.get('jwtPayload');
-  const { company_name, website_url, status } = await c.req.json();
+  const { company_name, website_url, status, source } = await c.req.json();
   const id = crypto.randomUUID();
 
   await c.env.DB.prepare(
-    "INSERT INTO leads (id, company_name, website_url, status, tenant_id, ai_score) VALUES (?, ?, ?, ?, ?, ?)"
-  ).bind(id, company_name, website_url, status || 'New', user.tenant_id, 0).run();
+    "INSERT INTO leads (id, company_name, website_url, status, tenant_id, ai_score, source) VALUES (?, ?, ?, ?, ?, ?, ?)"
+  ).bind(id, company_name, website_url, status || 'New', user.tenant_id, 0, source || 'Manual').run();
 
   await c.env.DB.prepare(
       "INSERT INTO activities (id, lead_id, tenant_id, type, content) VALUES (?, ?, ?, ?, ?)"
@@ -187,6 +187,21 @@ crm.patch('/leads/:id', async (c) => {
     // 🔥 TRIGGER WORKFLOW LOGIC (Phase 9)
     await triggerWorkflow(c.env.DB, user.tenant_id, 'STATUS_CHANGED', status, id);
   }
+
+  return c.json({ success: true });
+});
+
+crm.delete('/leads/:id', async (c) => {
+  const id = c.req.param('id');
+  const user = c.get('jwtPayload');
+  
+  await c.env.DB.batch([
+    c.env.DB.prepare("DELETE FROM leads WHERE id = ? AND tenant_id = ?").bind(id, user.tenant_id),
+    c.env.DB.prepare("DELETE FROM tasks WHERE lead_id = ? AND tenant_id = ?").bind(id, user.tenant_id),
+    c.env.DB.prepare("DELETE FROM contacts WHERE lead_id = ? AND tenant_id = ?").bind(id, user.tenant_id),
+    c.env.DB.prepare("DELETE FROM activities WHERE lead_id = ? AND tenant_id = ?").bind(id, user.tenant_id),
+    c.env.DB.prepare("DELETE FROM monitor_history WHERE lead_id = ? AND tenant_id = ?").bind(id, user.tenant_id)
+  ]);
 
   return c.json({ success: true });
 });
