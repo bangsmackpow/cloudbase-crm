@@ -1,11 +1,14 @@
 import { Hono } from 'hono';
 
-// CRM Core Operations v4.1 (Force-Corrected)
-const crm = new Hono<{ Bindings: any }>();
+// CRM Core Operations v4.2 (Fixed Context Typing)
+const crm = new Hono<{ 
+  Bindings: any, 
+  Variables: { jwtPayload: any } 
+}>();
 
 // --- REVENUE STATS (Phase 5: Financial Layer) ---
 crm.get('/stats', async (c) => {
-  const user = c.get('jwtPayload') as any;
+  const user = c.get('jwtPayload');
   const { results: totals } = await c.env.DB.prepare(
     "SELECT COUNT(*) as total, SUM(deal_value) as revenue FROM leads WHERE tenant_id = ? AND status = 'Won'"
   ).bind(user.tenant_id).all();
@@ -24,7 +27,7 @@ crm.get('/stats', async (c) => {
 // --- CONVERT TO CUSTOMER ---
 crm.post('/convert/:id', async (c) => {
   const id = c.req.param('id');
-  const user = c.get('jwtPayload') as any;
+  const user = c.get('jwtPayload');
   const { value, stripe_id } = await c.req.json();
 
   await c.env.DB.prepare(
@@ -40,7 +43,7 @@ crm.post('/convert/:id', async (c) => {
 
 // --- TASKS ---
 crm.get('/tasks', async (c) => {
-  const user = c.get('jwtPayload') as any;
+  const user = c.get('jwtPayload');
   const { results } = await c.env.DB.prepare(
     "SELECT t.*, l.company_name FROM tasks t JOIN leads l ON t.lead_id = l.id WHERE t.tenant_id = ? AND t.completed = 0 ORDER BY t.due_at ASC"
   ).bind(user.tenant_id).all();
@@ -49,7 +52,7 @@ crm.get('/tasks', async (c) => {
 
 crm.get('/tasks/:leadId', async (c) => {
   const leadId = c.req.param('leadId');
-  const user = c.get('jwtPayload') as any;
+  const user = c.get('jwtPayload');
   const { results } = await c.env.DB.prepare(
     "SELECT * FROM tasks WHERE lead_id = ? AND tenant_id = ? ORDER BY completed ASC, due_at ASC"
   ).bind(leadId, user.tenant_id).all();
@@ -58,7 +61,7 @@ crm.get('/tasks/:leadId', async (c) => {
 
 crm.post('/tasks/:leadId', async (c) => {
   const leadId = c.req.param('leadId');
-  const user = c.get('jwtPayload') as any;
+  const user = c.get('jwtPayload');
   const { title, due_at, priority } = await c.req.json();
   const id = crypto.randomUUID();
 
@@ -71,7 +74,7 @@ crm.post('/tasks/:leadId', async (c) => {
 
 crm.patch('/tasks/:id', async (c) => {
   const id = c.req.param('id');
-  const user = c.get('jwtPayload') as any;
+  const user = c.get('jwtPayload');
   const { completed } = await c.req.json();
 
   await c.env.DB.prepare(
@@ -84,7 +87,7 @@ crm.patch('/tasks/:id', async (c) => {
 // --- ACTIVITIES ---
 crm.get('/activities/:leadId', async (c) => {
   const leadId = c.req.param('leadId');
-  const user = c.get('jwtPayload') as any;
+  const user = c.get('jwtPayload');
   const { results } = await c.env.DB.prepare(
     "SELECT * FROM activities WHERE lead_id = ? AND tenant_id = ? ORDER BY created_at DESC"
   ).bind(leadId, user.tenant_id).all();
@@ -93,7 +96,7 @@ crm.get('/activities/:leadId', async (c) => {
 
 crm.post('/activities/:leadId', async (c) => {
   const leadId = c.req.param('leadId');
-  const user = c.get('jwtPayload') as any;
+  const user = c.get('jwtPayload');
   const { type, content } = await c.req.json();
   const id = crypto.randomUUID();
   await c.env.DB.prepare(
@@ -105,7 +108,7 @@ crm.post('/activities/:leadId', async (c) => {
 // --- LEAD STATUS ---
 crm.patch('/leads/:id', async (c) => {
   const id = c.req.param('id');
-  const user = c.get('jwtPayload') as any;
+  const user = c.get('jwtPayload');
   const { status, contact_id } = await c.req.json();
   
   let query = "UPDATE leads SET updated_at = CURRENT_TIMESTAMP";
@@ -137,7 +140,7 @@ crm.patch('/leads/:id', async (c) => {
 // --- CONTACTS ---
 crm.get('/contacts/:leadId', async (c) => {
   const leadId = c.req.param('leadId');
-  const user = c.get('jwtPayload') as any;
+  const user = c.get('jwtPayload');
   const { results } = await c.env.DB.prepare(
     "SELECT * FROM contacts WHERE lead_id = ? AND tenant_id = ? ORDER BY first_name ASC"
   ).bind(leadId, user.tenant_id).all();
@@ -146,7 +149,7 @@ crm.get('/contacts/:leadId', async (c) => {
 
 crm.post('/contacts/:leadId', async (c) => {
   const leadId = c.req.param('leadId');
-  const user = c.get('jwtPayload') as any;
+  const user = c.get('jwtPayload');
   const body = await c.req.json();
   const id = crypto.randomUUID();
 
