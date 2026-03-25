@@ -215,20 +215,43 @@ app.post('/auth/login', async (c) => {
   return c.json({ success: true, user: { id: user.id, email } });
 });
 
-// 4. Initial User Setup (Dev only or first user)
+// 4. Register & Setup Workspace
+app.post('/auth/login-dev', async (c) => {
+  // Backdoor for dev if needed, but we'll use register for now
+  return c.json({ error: 'Use /auth/register or /auth/login' }, 400);
+});
+
 app.post('/auth/register', async (c) => {
-  const { email, password, full_name } = await c.req.json();
+  const { email, password, full_name, subdomain } = await c.req.json();
+  const orgSubdomain = subdomain || c.get('orgSubdomain');
   
-  const existing = await c.env.DB.prepare('SELECT id FROM users WHERE email = ?').bind(email).first();
-  if (existing) return c.json({ error: 'User already exists' }, 400);
+  // 1. Transaction-like setup
+  try {
+    const existing = await c.env.DB.prepare('SELECT id FROM users WHERE email = ?').bind(email).first();
+    if (existing) return c.json({ error: 'User already exists' }, 400);
 
-  const hashedPassword = await hashPassword(password);
-  const userId = crypto.randomUUID();
+    const existingOrg = await c.env.DB.prepare('SELECT id FROM organizations WHERE subdomain = ?').bind(orgSubdomain).first();
+    if (existingOrg) return c.json({ error: 'Subdomain already taken' }, 400);
 
-  await c.env.DB.prepare('INSERT INTO users (id, email, password_hash, full_name) VALUES (?, ?, ?, ?)')
-    .bind(userId, email, hashedPassword, full_name).run();
+    const userId = crypto.randomUUID();
+    const orgId = crypto.randomUUID();
+    const workspaceId = crypto.randomUUID();
+    const boardId = crypto.randomUUID();
+    const hashedPassword = await hashPassword(password);
 
-  return c.json({ success: true, message: 'User created successfully' });
+    // Atomic-ish operations (D1 doesn't have multi-statement transactions in all SDKs yet, but we'll run them sequentially)
+    await c.env.DB.batch([
+      c.env.DB.prepare('INSERT INTO organizations (id, name, subdomain) VALUES (?, ?, ?)').bind(orgId, `${orgSubdomain} Workspace`, orgSubdomain),
+      c.env.DB.prepare('INSERT INTO users (id, email, password_hash, full_name) VALUES (?, ?, ?, ?)').bind(userId, email, hashedPassword, full_name),
+      c.env.DB.prepare('INSERT INTO memberships (user_id, org_id, role) VALUES (?, ?, ?)').bind(userId, orgId, 'admin'),
+      c.env.DB.prepare('INSERT INTO workspaces (id, org_id, name) VALUES (?, ?, ?)').bind(workspaceId, orgId, 'Main Workspace'),
+      c.env.DB.prepare('INSERT INTO boards (id, workspace_id, name) VALUES (?, ?, ?)').bind(boardId, workspaceId, 'Main Board')
+    ]);
+
+    return c.json({ success: true, message: 'Workspace created successfully. Please login.' });
+  } catch (err: any) {
+    return c.json({ error: 'Failed to create workspace', message: err.message }, 500);
+  }
 });
 
 app.post('/auth/logout', async (c) => {

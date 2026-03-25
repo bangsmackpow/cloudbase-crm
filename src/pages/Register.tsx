@@ -20,10 +20,9 @@ const Register = () => {
       const res = await fetch('/api/auth/register', {
         method: 'POST',
         headers: { 
-          'Content-Type': 'application/json',
-          'x-org-subdomain': subdomain 
+          'Content-Type': 'application/json'
         },
-        body: JSON.stringify({ email, password, full_name: fullName })
+        body: JSON.stringify({ email, password, full_name: fullName, subdomain })
       });
 
       if (!res.ok) {
