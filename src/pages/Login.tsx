@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
 const Login = () => {
@@ -140,7 +141,7 @@ const Login = () => {
         </form>
 
         <p className="mt-8 text-center text-sm text-secondary">
-          New to Chalkboard? <a href="#" className="font-semibold text-accent-blue hover:underline">Create a workspace</a>
+          New to Chalkboard? <Link to="/register" className="font-semibold text-accent-blue hover:underline">Create a workspace</Link>
         </p>
       </div>
     </div>
