@@ -30,6 +30,11 @@ export default {
         accent: {
           DEFAULT: "hsl(var(--accent))",
           foreground: "hsl(var(--accent-foreground))",
+          blue: "#007AFF",
+          purple: "#5856D6",
+          success: "#34C759",
+          warning: "#FF9500",
+          danger: "#FF3B30",
         },
         destructive: {
           DEFAULT: "hsl(var(--destructive))",
