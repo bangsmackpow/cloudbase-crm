@@ -1,54 +1,61 @@
 import React from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import Dashboard from './pages/Dashboard';
-import LeadDetails from './pages/LeadDetails';
-import ClientPortal from './pages/ClientPortal';
-import Login from './pages/Login';
+import CommandRail from './components/CommandRail';
+import './styles/theme.css';
 
-// --- Protected Route Wrapper ---
-const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
-  const token = localStorage.getItem('cb_token');
-  
-  if (!token) {
-    // No token? Send them to the login door.
-    return <Navigate to="/login" replace />;
-  }
-  
-  return <>{children}</>;
+const App = () => {
+  return (
+    <div className="flex h-screen w-screen overflow-hidden bg-primary">
+      <CommandRail />
+      <main className="flex-1 ml-16 p-8 overflow-y-auto">
+        <header className="mb-10 flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-semibold tracking-tight">Main Board</h1>
+            <p className="text-secondary mt-1">Overview of all active items and tasks</p>
+          </div>
+          <div className="flex gap-3">
+            <button className="px-4 py-2 bg-secondary border rounded-lg hover:bg-border-light transition-all">Filter</button>
+            <button className="px-4 py-2 bg-accent-blue text-white rounded-lg shadow-sm hover:opacity-90 transition-all">+ New Item</button>
+          </div>
+        </header>
+
+        <section className="glass rounded-2xl p-6 shadow-md border animate-in fade-in slide-in-from-bottom-4 duration-700">
+          <div className="flex flex-col gap-4">
+            <div className="flex items-center gap-4 text-secondary font-medium px-4 pb-2 border-b">
+              <div className="w-1/3">Item Name</div>
+              <div className="w-1/4">Status</div>
+              <div className="w-1/4">Due Date</div>
+              <div className="w-1/6">Owner</div>
+            </div>
+            
+            <BoardItem name="Design System Review" status="In Progress" date="Dec 24, 2026" owner="CL" />
+            <BoardItem name="D1 Migration" status="Done" date="Dec 22, 2026" owner="AI" />
+            <BoardItem name="Authentication Flow" status="Pending" date="Dec 28, 2026" owner="JD" />
+          </div>
+        </section>
+      </main>
+    </div>
+  );
 };
 
-export default function App() {
-  return (
-    <BrowserRouter>
-      <div className="min-h-screen bg-[#020617] text-slate-100 font-sans selection:bg-orange-500/30">
-        <Routes>
-          {/* Public Routes */}
-          <Route path="/login" element={<Login />} />
-          <Route path="/portal/:id" element={<ClientPortal />} />
-
-          {/* Protected Command Center Routes */}
-          <Route 
-            path="/" 
-            element={
-              <ProtectedRoute>
-                <Dashboard />
-              </ProtectedRoute>
-            } 
-          />
-          
-          <Route 
-            path="/lead/:id" 
-            element={
-              <ProtectedRoute>
-                <LeadDetails />
-              </ProtectedRoute>
-            } 
-          />
-
-          {/* Catch-all Redirect */}
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
+const BoardItem = ({ name, status, date, owner }: any) => (
+  <div className="flex items-center gap-4 p-4 rounded-xl hover:bg-border-light transition-all border border-transparent hover:border-border-light cursor-pointer group">
+    <div className="w-1/3 font-medium text-primary">{name}</div>
+    <div className="w-1/4">
+      <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
+        status === 'Done' ? 'bg-accent-success/10 text-accent-success' : 
+        status === 'In Progress' ? 'bg-accent-blue/10 text-accent-blue' : 
+        'bg-accent-warning/10 text-accent-warning'
+      }`}>
+        {status}
+      </span>
+    </div>
+    <div className="w-1/4 text-secondary text-sm">{date}</div>
+    <div className="w-1/6 flex items-center gap-2">
+      <div className="w-6 h-6 rounded-full bg-accent-purple/20 text-accent-purple flex items-center justify-center text-[10px] font-bold">
+        {owner}
       </div>
-    </BrowserRouter>
-  );
-}
+    </div>
+  </div>
+);
+
+export default App;

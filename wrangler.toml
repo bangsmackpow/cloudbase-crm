@@ -1,24 +1,20 @@
-name = "cloudbase-crm"
+name = "chalkboard-crm"
 main = "src/index.ts"
 compatibility_date = "2024-03-21"
 
 [[d1_databases]]
 binding = "DB"
-database_name = "cloudbase-db"
-database_id = "e3f00142-276f-46a9-bf9f-ee3b94827cb9"
-
-
-[[r2_buckets]]
-binding = "BUCKET"
-bucket_name = "cloudbase-assets"
+database_name = "chalkboard-db"
+database_id = "faf9a32b-1947-4cbb-a41f-6fe96d245fcc"
 
 [ai]
 binding = "AI"
 
 [vars]
-JWT_SECRET = "dev-secret-123"
-STRIPE_SECRET_KEY = "sk_test_mock_123"
+JWT_SECRET = "chalkboard-dev-secret"
 
-# Add this at the bottom
-[triggers]
-crons = ["0 13 * * *"] # Runs at 13:00 UTC (8:00 AM Creston time)
+# R2 Buckets will be added dynamically as tenants are onboarded
+# or we use a single bucket with Org-level prefixing for scale.
+[[r2_buckets]]
+binding = "ASSETS"
+bucket_name = "chalkboard-assets"

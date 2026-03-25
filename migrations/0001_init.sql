@@ -1,0 +1,2 @@
+-- Chalkboard CRM Master Schema
+-- Multi-tenant Archi

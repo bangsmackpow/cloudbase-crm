@@ -1,8 +1,4 @@
-node_modules/
-.wrangler/
-.dev.vars
-dist/
-*.local.db
-.env
-*.sql
-*.ps1
+
+# Archived Legacy Project
+_archive/
+

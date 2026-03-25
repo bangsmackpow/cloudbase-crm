@@ -1,1 +1,0 @@
-CREATE TABLE audit_history (id TEXT PRIMARY KEY, lead_id TEXT, tenant_id TEXT, r2_key TEXT, version_ts INTEGER, created_by TEXT, created_at DATETIME DEFAULT CURRENT_TIMESTAMP);
