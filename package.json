@@ -4,10 +4,10 @@
   "version": "1.0.0",
   "type": "module",
   "scripts": {
-    "dev": "wrangler pages dev . --d1 DB=chalkboard-db --r2 CHALKBOARD_ASSETS=chalkboard-assets --local --persist-to .wrangler/state --compatibility-date=2024-03-25",
+    "dev": "wrangler pages dev --d1 DB=chalkboard-db --r2 CHALKBOARD_ASSETS=chalkboard-assets --local --persist-to .wrangler/state --compatibility-date=2024-03-25 -- npx vite --port 5173",
     "build": "vite build",
     "preview": "vite preview",
-    "deploy": "npm run build && wrangler pages deploy dist --project-name chalkboard-crm",
+    "deploy": "npm run build && wrangler pages deploy dist --project-name chalkboard-dashboard",
     "db:migrate": "wrangler d1 migrations apply chalkboard-db --local --persist-to .wrangler/state",
     "db:seed": "wrangler d1 execute chalkboard-db --local --file seed.sql --persist-to .wrangler/state"
   },
@@ -28,6 +28,6 @@
     "tailwindcss": "^3.4.3",
     "typescript": "^5.2.2",
     "vite": "^5.2.0",
-    "wrangler": "^3.114.17"
+    "wrangler": "latest"
   }
 }
