@@ -1,19 +1,33 @@
 {
   "name": "chalkboard-crm",
+  "private": true,
   "version": "1.0.0",
-  "description": "Premium multi-tenant CRM on Cloudflare Edge",
-  "main": "src/index.ts",
+  "type": "module",
   "scripts": {
-    "dev": "wrangler dev",
-    "deploy": "wrangler deploy",
-    "db:migrate": "wrangler d1 migrations apply chalkboard-db --local",
-    "db:migrate:remote": "wrangler d1 migrations apply chalkboard-db --remote"
+    "dev": "wrangler pages dev . --d1 DB=chalkboard-db --r2 CHALKBOARD_ASSETS=chalkboard-assets --local --persist-to .wrangler/state --compatibility-date=2024-03-25",
+    "build": "vite build",
+    "preview": "vite preview",
+    "deploy": "npm run build && wrangler pages deploy dist --project-name chalkboard-crm",
+    "db:migrate": "wrangler d1 migrations apply chalkboard-db --local --persist-to .wrangler/state",
+    "db:seed": "wrangler d1 execute chalkboard-db --local --file seed.sql --persist-to .wrangler/state"
   },
   "dependencies": {
-    "hono": "^4.0.0"
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-router-dom": "^6.22.3",
+    "lucide-react": "^0.363.0",
+    "hono": "^4.1.0"
   },
   "devDependencies": {
-    "@cloudflare/workers-types": "^4.0.0",
-    "wrangler": "^3.0.0"
+    "@cloudflare/workers-types": "^4.20240320.1",
+    "@types/react": "^18.3.1",
+    "@types/react-dom": "^18.3.1",
+    "@vitejs/plugin-react": "^4.2.1",
+    "autoprefixer": "^10.4.19",
+    "postcss": "^8.4.38",
+    "tailwindcss": "^3.4.3",
+    "typescript": "^5.2.2",
+    "vite": "^5.2.0",
+    "wrangler": "^3.114.17"
   }
 }

@@ -1,4 +1,16 @@
+# Dependencies
+node_modules/
+.wrangler/
+dist/
+
+# Env & Secrets
+.env
+.env.local
+.dev.vars
+
+# Operating System
+.DS_Store
+Thumbs.db
 
 # Archived Legacy Project
 _archive/
-
