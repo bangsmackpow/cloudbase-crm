@@ -137,6 +137,95 @@ app.get('/auth/verify', async (c) => {
   return c.redirect('/dashboard');
 });
 
+/**
+ * Password Authentication (PBKDF2)
+ */
+
+async function hashPassword(password: string) {
+  const salt = crypto.getRandomValues(new Uint8Array(16));
+  const passwordBuffer = new TextEncoder().encode(password);
+  const baseKey = await crypto.subtle.importKey('raw', passwordBuffer, 'PBKDF2', false, ['deriveBits']);
+  const keyBuffer = await crypto.subtle.deriveBits({
+    name: 'PBKDF2',
+    salt,
+    iterations: 100000,
+    hash: 'SHA-256'
+  }, baseKey, 256);
+
+  const saltHex = Array.from(salt).map(b => b.toString(16).padStart(2, '0')).join('');
+  const hashHex = Array.from(new Uint8Array(keyBuffer)).map(b => b.toString(16).padStart(2, '0')).join('');
+  return `pbkdf2:${saltHex}:${hashHex}`;
+}
+
+async function verifyPassword(password: string, storedHash: string) {
+  const parts = storedHash.split(':');
+  if (parts.length !== 3 || parts[0] !== 'pbkdf2') return false;
+  
+  const saltHex = parts[1];
+  const hashHex = parts[2];
+  const salt = new Uint8Array(saltHex.match(/.{1,2}/g)!.map(byte => parseInt(byte, 16)));
+  
+  const passwordBuffer = new TextEncoder().encode(password);
+  const baseKey = await crypto.subtle.importKey('raw', passwordBuffer, 'PBKDF2', false, ['deriveBits']);
+  const keyBuffer = await crypto.subtle.deriveBits({
+    name: 'PBKDF2',
+    salt,
+    iterations: 100000,
+    hash: 'SHA-256'
+  }, baseKey, 256);
+  
+  const currentHashHex = Array.from(new Uint8Array(keyBuffer)).map(b => b.toString(16).padStart(2, '0')).join('');
+  return currentHashHex === hashHex;
+}
+
+// 3. Password Login
+app.post('/auth/login', async (c) => {
+  const { email, password } = await c.req.json();
+  
+  const user = await c.env.DB.prepare('SELECT id, password_hash FROM users WHERE email = ?')
+    .bind(email).first<{ id: string, password_hash: string }>();
+
+  if (!user || !user.password_hash) {
+    return c.json({ error: 'Invalid email or password' }, 401);
+  }
+
+  const isValid = await verifyPassword(password, user.password_hash);
+  if (!isValid) return c.json({ error: 'Invalid email or password' }, 401);
+
+  // Create Session
+  const sessionToken = crypto.randomUUID();
+  const sessionExpires = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
+  
+  await c.env.DB.prepare('INSERT INTO sessions (id, user_id, expires_at) VALUES (?, ?, ?)')
+    .bind(sessionToken, user.id, sessionExpires).run();
+
+  setCookie(c, 'cb_session', sessionToken, {
+    path: '/',
+    httpOnly: true,
+    secure: true,
+    sameSite: 'Lax',
+    maxAge: 7 * 24 * 60 * 60
+  });
+
+  return c.json({ success: true, user: { id: user.id, email } });
+});
+
+// 4. Initial User Setup (Dev only or first user)
+app.post('/auth/register', async (c) => {
+  const { email, password, full_name } = await c.req.json();
+  
+  const existing = await c.env.DB.prepare('SELECT id FROM users WHERE email = ?').bind(email).first();
+  if (existing) return c.json({ error: 'User already exists' }, 400);
+
+  const hashedPassword = await hashPassword(password);
+  const userId = crypto.randomUUID();
+
+  await c.env.DB.prepare('INSERT INTO users (id, email, password_hash, full_name) VALUES (?, ?, ?, ?)')
+    .bind(userId, email, hashedPassword, full_name).run();
+
+  return c.json({ success: true, message: 'User created successfully' });
+});
+
 app.post('/auth/logout', async (c) => {
   const token = getCookie(c, 'cb_session');
   if (token) {

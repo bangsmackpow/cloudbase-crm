@@ -3,12 +3,14 @@ import { useAuth } from '../context/AuthContext';
 
 const Login = () => {
   const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [subdomain, setSubdomain] = useState('default');
+  const [mode, setMode] = useState<'magic' | 'password'>('password');
   const [sent, setSent] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   
-  const { login } = useAuth();
+  const { login, loginWithPassword } = useAuth() as any;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -16,8 +18,12 @@ const Login = () => {
     setError('');
     
     try {
-      await login(email, subdomain);
-      setSent(true);
+      if (mode === 'magic') {
+        await login(email, subdomain);
+        setSent(true);
+      } else {
+        await loginWithPassword(email, password, subdomain);
+      }
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -58,6 +64,21 @@ const Login = () => {
           <p className="text-secondary mt-2">Sign in to your organization workspace</p>
         </div>
 
+        <div className="flex bg-secondary/50 p-1 rounded-xl mb-8">
+          <button 
+            onClick={() => setMode('password')}
+            className={`flex-1 py-2 text-sm font-medium rounded-lg transition-all ${mode === 'password' ? 'bg-white shadow-sm text-primary' : 'text-secondary hover:text-primary'}`}
+          >
+            Password
+          </button>
+          <button 
+            onClick={() => setMode('magic')}
+            className={`flex-1 py-2 text-sm font-medium rounded-lg transition-all ${mode === 'magic' ? 'bg-white shadow-sm text-primary' : 'text-secondary hover:text-primary'}`}
+          >
+            Magic Link
+          </button>
+        </div>
+
         {error && (
           <div className="mb-6 p-4 bg-accent-danger/10 border border-accent-danger/20 text-accent-danger rounded-xl text-sm font-medium animate-in fade-in slide-in-from-top-2">
             {error}
@@ -94,12 +115,27 @@ const Login = () => {
             />
           </div>
 
+          {mode === 'password' && (
+            <div className="space-y-2 animate-in fade-in slide-in-from-top-2">
+              <label className="text-sm font-medium text-secondary">Password</label>
+              <input 
+                type="password" 
+                name="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="••••••••"
+                required
+                className="w-full rounded-xl border bg-bg-secondary px-4 py-3 outline-none focus:ring-2 focus:ring-accent-blue/20 transition-all"
+              />
+            </div>
+          )}
+
           <button 
             type="submit"
             disabled={loading}
             className={`w-full rounded-xl bg-accent-blue py-3 font-semibold text-white shadow-md hover:opacity-90 active:scale-[0.98] transition-all ${loading ? 'opacity-50 cursor-not-allowed' : ''}`}
           >
-            {loading ? 'Sending Link...' : 'Continue with Magic Link'}
+            {loading ? 'Processing...' : (mode === 'magic' ? 'Send Magic Link' : 'Sign In')}
           </button>
         </form>
 

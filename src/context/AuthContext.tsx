@@ -55,6 +55,26 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const loginWithPassword = async (email: string, password: string, orgSubdomain: string) => {
+    const res = await fetch('/api/auth/login', {
+      method: 'POST',
+      headers: { 
+        'Content-Type': 'application/json',
+        'x-org-subdomain': orgSubdomain
+      },
+      body: JSON.stringify({ email, password })
+    });
+    
+    if (!res.ok) {
+      const error = await res.json();
+      throw new Error(error.error || 'Invalid email or password');
+    }
+    
+    const data = await res.json();
+    setUser(data.user);
+    window.location.href = '/dashboard';
+  };
+
   const logout = async () => {
     await fetch('/api/auth/logout', { method: 'POST' });
     setUser(null);
