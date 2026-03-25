@@ -1,8 +1,29 @@
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import CommandRail from './components/CommandRail';
 import Login from './pages/Login';
+import { AuthProvider, useAuth } from './context/AuthContext';
 import './styles/theme.css';
+
+const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
+  const { user, loading } = useAuth();
+  const location = useLocation();
+
+  if (loading) return (
+    <div className="flex h-screen items-center justify-center bg-primary">
+      <div className="animate-pulse flex flex-col items-center">
+        <div className="w-12 h-12 bg-accent-blue rounded-xl mb-4"></div>
+        <p className="text-secondary font-medium">Loading session...</p>
+      </div>
+    </div>
+  );
+
+  if (!user) {
+    return <Navigate to="/login" state={{ from: location }} replace />;
+  }
+
+  return <>{children}</>;
+};
 
 const DashboardLayout = ({ children }: { children: React.ReactNode }) => (
   <div className="flex h-screen w-screen overflow-hidden bg-primary">
@@ -13,12 +34,15 @@ const DashboardLayout = ({ children }: { children: React.ReactNode }) => (
   </div>
 );
 
-const MainBoard = () => (
+const MainBoard = () => {
+  const { user } = useAuth();
+  
+  return (
   <>
     <header className="mb-10 flex items-center justify-between">
       <div>
         <h1 className="text-3xl font-semibold tracking-tight">Main Board</h1>
-        <p className="text-secondary mt-1">Overview of all active items and tasks</p>
+        <p className="text-secondary mt-1">Logged in as <span className="text-primary font-medium">{user?.email}</span></p>
       </div>
       <div className="flex gap-3">
         <button className="px-4 py-2 bg-secondary border rounded-lg hover:bg-border-light transition-all">Filter</button>
@@ -42,6 +66,7 @@ const MainBoard = () => (
     </section>
   </>
 );
+};
 
 const BoardItem = ({ name, status, date, owner }: any) => (
   <div className="flex items-center gap-4 p-4 rounded-xl hover:bg-border-light transition-all border border-transparent hover:border-border-light cursor-pointer group">
@@ -66,13 +91,19 @@ const BoardItem = ({ name, status, date, owner }: any) => (
 
 const App = () => {
   return (
-    <Router>
-      <Routes>
-        <Route path="/login" element={<Login />} />
-        <Route path="/dashboard" element={<DashboardLayout><MainBoard /></DashboardLayout>} />
-        <Route path="/" element={<Navigate to="/login" replace />} />
-      </Routes>
-    </Router>
+    <AuthProvider>
+      <Router>
+        <Routes>
+          <Route path="/login" element={<Login />} />
+          <Route path="/dashboard" element={
+            <ProtectedRoute>
+              <DashboardLayout><MainBoard /></DashboardLayout>
+            </ProtectedRoute>
+          } />
+          <Route path="/" element={<Navigate to="/dashboard" replace />} />
+        </Routes>
+      </Router>
+    </AuthProvider>
   );
 };
 
