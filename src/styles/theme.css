@@ -1,3 +1,7 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
 :root {
   /* Apple/Enterprise Palette */
   --bg-primary: #F9F9FB;
