@@ -23,6 +23,11 @@ type Variables = {
 
 const app = new Hono<{ Bindings: Env; Variables: Variables }>().basePath('/api');
 
+app.onError((err, c) => {
+  console.error(`[ERROR] ${err.message}`, err);
+  return c.json({ error: 'Internal Server Error', message: err.message }, 500);
+});
+
 /**
  * Multi-tenancy & Auth Middleware
  */
